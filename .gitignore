@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project Specific Ignored Files
+mlflow.db
+mlruns/
+data/
+models/checkpoints/
+models/exported/
+models/pretrained/
+prev_ver/
+outputs/logs/
+outputs/predictions/
