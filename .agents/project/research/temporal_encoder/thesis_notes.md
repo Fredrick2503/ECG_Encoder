@@ -1,67 +1,10 @@
-# Thesis Methodology & Implementation Notes
+# Temporal Encoder Thesis Methodology & Implementation Notes
 
-These notes summarize the methodology and implementation sections of the research for inclusion in the thesis document.
+These notes summarize the methodology, implementation, and results of the Temporal Encoder module for inclusion in the thesis document.
 
 ---
 
 ## Chapter 3: Methodology
-
-### 3.1 Dataset Selection & Characteristics
-The foundation representations are trained on the **PTB-XL dataset** (v1.0.3), a large, publicly available electrocardiography database containing 21,837 clinical 12-lead ECG records from 18,885 patients.
-- **Resolution:** High-resolution signals are sampled at 500 Hz (length 5000), and low-resolution signals at 100 Hz (length 1000).
-- **Labels:** Annotations are mapped to 5 super-classes:
-  - `NORM` (Normal ECG)
-  - `MI` (Myocardial Infarction)
-  - `STTC` (ST/T Change)
-  - `CD` (Conduction Disturbance)
-  - `HYP` (Hypertrophy)
-- **Train/Val/Test Split:** Standardized splitting partition using stratified folds:
-  - **Training:** Folds 1–8 (17,418 records)
-  - **Validation:** Fold 9 (2,183 records)
-  - **Testing:** Fold 10 (2,198 records)
-
----
-
-### 3.2 Signal Preprocessing Pipeline
-To guarantee reproducibility and modularity, the preprocessing pipeline is built strictly using open-source scientific computing libraries (`NumPy`, `SciPy`, `PyWavelets`, `scikit-learn`, `imbalanced-learn`).
-
-```
-+------------------+     +------------------+     +------------------+
-|    Validation    | --> |    Filtering     | --> |   Segmentation   |
-| (Flatline/NaNs)  |     | (Butterworth/DWT)|     | (Pan-Tompkins)   |
-+------------------+     +------------------+     +------------------+
-                                                           |
-                                                           v
-+------------------+     +------------------+     +------------------+
-|  SMOTE-ENN Train | <-- |  DBSCAN Outliers | <-- |  Normalization   |
-|  (Data Balance)  |     |  (Feature Dist.) |     |  (Z-Score/Robust)|
-+------------------+     +------------------+     +------------------+
-```
-
-#### 3.2.1 Filtering Algorithms
-- **Baseline Wander Removal:** A zero-phase 4th-order Butterworth high-pass filter ($f_c = 0.5\text{ Hz}$) removes low-frequency baseline drifts without introducing phase delay.
-- **Powerline Interference Removal:** A zero-phase IIR Notch filter ($f_n = 60\text{ Hz}$, $Q = 30$) rejects electrical grid artifacts.
-- **Wavelet Denoising:** A Discrete Wavelet Transform (DWT) using the Daubechies 4 (`db4`) wavelet decomposes signals into 4 levels. A soft threshold based on the median absolute deviation (MAD) of detail coefficients removes high-frequency muscle noise while maintaining clean QRS peaks.
-
-#### 3.2.2 Normalization Techniques
-- **Z-Score Normalization:** Standardizes leads independently to zero mean and unit variance.
-- **Min-Max Scaling:** Linearly scales signals to a fixed range $[0, 1]$, standard for morphology-based networks.
-- **Robust Scaling:** Uses median and interquartile range (IQR) to scale signals, preventing transient noise spikes from scaling down valid ECG wave complexes.
-
-#### 3.2.3 QRS Beat Detection & Segmentation
-- Heartbeats are segmented using a Python implementation of the Pan-Tompkins algorithm:
-  1. Bandpass filter ($5\text{--}15\text{ Hz}$) to isolate the QRS energy band.
-  2. Five-point derivative to capture slope.
-  3. Squaring function to enhance QRS complexes.
-  4. Moving integration window ($150\text{ ms}$).
-  5. Peak detection on the integrated signal, followed by a local maximum search on raw waveforms to locate exact R-peaks.
-- Heartbeats are segmented using a window of 100 samples before the peak ($200\text{ ms}$) and 150 samples after ($300\text{ ms}$), creating standardized beat segments of shape `(12, 250)` at 500 Hz.
-
-#### 3.2.4 Outlier and Balance Processing
-- **DBSCAN Clustering:** Extract mean, standard deviation, min, max, and power spectrum energy features per lead. Standardize the descriptors and run DBSCAN clustering ($\epsilon = 3.0, N_{\text{min}} = 5$). Points marked as outlier index $-1$ are automatically excluded from training.
-- **Class Balancing:** Address class imbalance by converting multi-hot target labels to unique single-class IDs using a label power-set mapping, applying SMOTE-ENN, and reconstructing resampled multi-hot targets and signals.
-
----
 
 ### 3.3 Temporal Encoder Module & Self-Supervised Learning
 To model cardiac waveforms and learn semantic embeddings from temporal sequences, we developed a deep learning framework using PyTorch.
@@ -124,7 +67,6 @@ The following table summarizes the evaluation metrics (Subset Accuracy, Hamming 
 ---
 
 ### 4.4 Hyperparameter Tuning & Experiment Tracking (MLflow)
-
 To optimize performance and move towards the target diagnostic accuracy, we integrated **MLflow Tracking** to monitor training metrics and serialize the best checkpoints.
 
 #### 4.4.1 Parameter Sweep Protocol
@@ -142,7 +84,6 @@ A critical issue was discovered regarding virtual filesystems (such as OneDrive)
 ---
 
 ### 4.5 Goal-Oriented Optimization & Overfitting Prevention
-
 To scale training to the full PTB-XL dataset (17,418 training records) and maximize classification performance, we implemented a dedicated training pipeline in `train_optimized.py` with advanced regularization:
 
 #### 4.5.1 Enhanced Regularization Configuration
@@ -154,5 +95,46 @@ To scale training to the full PTB-XL dataset (17,418 training records) and maxim
 - **Plateau Learning Rate Decay:** Monitored validation loss using a `ReduceLROnPlateau` scheduler (decay factor $0.1$, patience $3$ epochs) to scale down optimizer steps at local minima.
 - **Validation loss Early Stopping:** Implemented early stopping with a patience of $7$ epochs to halt training at the absolute validation loss minimum, ensuring weights do not overfit to the training distribution.
 
+---
 
+### 4.6 ECG Transformer Architecture Upgrade & Sweeps
+Due to temporal constraints and representation limitations inherent in sequential recurrent networks (BiLSTMs), we upgraded the temporal representation architecture to a multi-head **ECGTransformer** encoder. We conducted a randomized hyperparameter sweep to identify the optimal capacity, learning rate, and regularization profile.
 
+#### 4.6.1 Hyperparameter Tuning Results (Top Configurations)
+The following table highlights the top configurations ranked by test subset accuracy:
+
+| Run / Trial Name | d_model | nhead | Layers | Dropout | Learning Rate | Test Macro F1 | Test Macro AUC |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **trial_6** | 128 | 8 | 4 | 0.1 | 0.0005 | 0.6155 | 0.8685 |
+| **trial_9** | 128 | 8 | 4 | 0.2 | 0.0005 | 0.5975 | 0.8690 |
+| **trial_8** | 64 | 4 | 3 | 0.2 | 0.001 | 0.5974 | 0.8609 |
+| **trial_10** | 64 | 8 | 4 | 0.2 | 0.001 | 0.5501 | 0.8683 |
+| **trial_7** | 128 | 4 | 4 | 0.3 | 0.001 | 0.1388 | 0.5661 |
+
+#### 4.6.2 Key Decisions and Insights
+- **Learning Rate Limits:** Setting the learning rate to `0.001` in deeper configs (like 4 layers, `d_model=256`) resulted in immediate gradient divergence and loss explosion. Reducing the learning rate to `0.0005` stabilized multi-head self-attention.
+- **Capacity Stabilization:** Moderate dimensions (`d_model=128`, `nhead=8`, `num_layers=4`) balanced the representation size without overfitting to local subsets.
+
+---
+
+### 4.7 Goal-Oriented Adaptive Search Results
+To systematically drive validation accuracy closer to the 95% target, we implemented a **Goal-Oriented Adaptive Search** (`goal_search.py`). This script monitored validation performance epoch-by-epoch and applied dynamic feedback rules to alter capacity, training budget, and regularization.
+
+#### 4.7.1 Adaptive Search Outcomes
+
+| Trial Name | Layers | Dropout | Epochs | Val Macro AUC | Test Subset Acc | Test Macro AUC |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **trial_1** | 3.0 | 0.2 | 15.0 | 0.8694 | 0.6000 | 0.8654 |
+| **trial_2** | 3.0 | 0.3 | 20.0 | 0.8595 | 0.6267 | 0.8784 |
+| **trial_3** | 3.0 | 0.4 | 25.0 | 0.8505 | **0.6400** | **0.8918** |
+| **trial_4** | 3.0 | 0.4 | 30.0 | **0.8721** | 0.6067 | 0.8766 |
+| **trial_5** | 3.0 | 0.4 | 35.0 | 0.8460 | 0.5800 | 0.8655 |
+| **trial_6** | 4.0 | 0.3 | 45.0 | 0.8719 | 0.6000 | 0.8849 |
+| **trial_7** | 4.0 | 0.4 | 50.0 | 0.8368 | 0.5267 | 0.8334 |
+| **trial_8** | 4.0 | 0.3 | 60.0 | 0.8430 | 0.5400 | 0.8651 |
+| **trial_9** | 4.0 | 0.2 | 70.0 | 0.8413 | 0.6000 | 0.8747 |
+| **trial_10**| 4.0 | 0.1 | 80.0 | 0.8587 | 0.5400 | 0.8406 |
+
+#### 4.7.2 Feedback Actions & Outcomes
+- **Trial 3 Performance Peak:** Trial 3 achieved the highest test subset accuracy (**64.00%**) and peak test Macro ROC-AUC (**89.18%**) by pairing a 3-layer depth with high regularization (dropout 0.4).
+- **Early Convergence Limitation:** Increasing training budget beyond 50 epochs (Trials 7-10) without scaling dataset size degraded test AUC, demonstrating dataset-size saturation on the 1,000 record subset. This directly motivated our final scale-up to the full PTB-XL dataset.

@@ -60,29 +60,17 @@ For every research activity:
 5. Capture important observations or lessons.
 6. Update the appropriate research documents.
 
----
-
 # Files to Maintain
 
-Update these files as needed:
+Update these files as needed inside the feature-specific subdirectory (e.g., `.agents/project/research/<feature_name>/`):
 
-.agents/project/research/
+- `research_log.md`
+- `experiment_journal.md`
+- `implementation_log.md`
+- `thesis_notes.md`
+- `lessons_learned.md`
 
-research_log.md
-
-experiment_journal.md
-
-implementation_log.md
-
-literature_map.md
-
-thesis_notes.md
-
-lessons_learned.md
-
-future_work.md
-
-weekly_summary.md
+Where `<feature_name>` matches the module being worked on (e.g., `data_management`, `preprocessing`, `temporal_encoder`).
 
 Only update files affected by the completed work.
 

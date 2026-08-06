@@ -97,19 +97,13 @@ For each evaluation:
 5. Generate evaluation summary.
 6. Recommend whether the model should be accepted or rejected.
 
----
-
 # Files to Maintain
 
 Update when applicable:
 
-.agents/project/
-
-progress.md
-
-research/experiment_journal.md
-
-research/research_log.md
+- `.agents/project/progress.md`
+- `.agents/project/research/<feature_name>/experiment_journal.md`
+- `.agents/project/research/<feature_name>/research_log.md`
 
 Do not modify project planning or architecture files.
 

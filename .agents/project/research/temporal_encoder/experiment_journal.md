@@ -1,6 +1,6 @@
-# Experiment Journal
+# Temporal Encoder Experiment Journal
 
-This journal documents the design, configurations, and outcomes of experiments run on the ECG Foundation Representation System.
+This journal documents the design, configurations, and outcomes of experiments run on the Temporal Encoder module.
 
 ---
 
@@ -52,4 +52,3 @@ Train a high-capacity BiLSTM model on the **full PTB-XL dataset** (17,418 traini
 - **Batch Size:** 64
 - **Experiment:** `ECG_TemporalEncoder_Optimized`
 - **Run Name:** `ecg_blstm_final_optimized_run`
-

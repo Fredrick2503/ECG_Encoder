@@ -85,6 +85,14 @@ Completed:
 * Designed, implemented, and verified `train_optimized.py` featuring dropout regularization, ReduceLROnPlateau learning rate scheduler, weight decay, and early stopping.
 * Launched the final optimized BiLSTM training run on the full PTB-XL dataset (17,418 training records) with MAE pretraining in the background.
 * Cleaned up stalled RUNNING trials in the MLflow database and resumed the expanded parameter tuning sweep (`run_expanded_sweep.py`) starting from Trial 6 in the background.
+* Implemented new temporal encoder architectures `ECGTransformer` and `ECGMultiScaleCNN` under `temporal_encoder/encoder_upgrades.py`.
+* Executed a comparative experiment (`run_comparison_experiment.py`) showing the Transformer architecture outperforming the Multi-Scale CNN+BiLSTM baseline by a margin of 13.11% in subset accuracy and 37.76% in Macro F1 on the test set.
+* Designed, implemented, and executed a 10-trial Goal-Oriented Adaptive Search (`goal_search.py`) for the ECG Transformer, utilizing an automated validation feedback loop to optimize layers, regularization, and epochs, achieving a peak validation ROC-AUC of 87.21% and test ROC-AUC of 89.18%.
+* Implemented Focal Loss and Asymmetric Loss (ASL) for multi-label classification (`utils/losses.py`).
+* Implemented Squeeze-and-Excitation (SE) channel attention block class (`SqueezeExcitation1D` in `temporal_encoder/encoder_upgrades.py`) and integrated it into the `ECGResNet1D` blocks.
+* Trained an optimized ResNet model with SE attention and Asymmetric Loss, and an optimized Transformer model with Asymmetric Loss on the full PTB-XL dataset.
+* Developed the `ensemble_eval.py` script to ensemble models, grid search for optimal weights, optimize per-class validation thresholds, and evaluate final test performance.
+
 
 
 

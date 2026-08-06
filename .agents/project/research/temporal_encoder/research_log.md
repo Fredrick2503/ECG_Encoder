@@ -1,33 +1,6 @@
-# Chronological Research Log
+# Temporal Encoder Research Log
 
-This log documents key milestones, experimental trials, and environment configurations in chronological order.
-
----
-
-### [2026-08-02] - Initial Workspace & Data Management
-- **Topic:** Architecture & Data Pipeline
-- **Details:**
-  - Designed the layered architecture (Data Management -> Preprocessing -> Representation Generation -> Encoder Modules).
-  - Implemented the PTB-XL downloader with Direct PhysioNet fallback, the metadata parser, the fold-based splitter, and the PyTorch dataloader factory.
-  - Verified loader outputs via synthetic unit tests in `test_data_management.py`.
-
----
-
-### [2026-08-03] - Environment Optimization & Preprocessing Pipeline
-- **Topic:** Environment Setup & Signal Preprocessing
-- **Details:**
-  - Configured Python 3.10 virtual environment `.venv`.
-  - Added support for PyTorch-free loading by catching import errors in package `__init__.py`.
-  - Implemented HTTP Range resuming in the dataset downloader to support unstable connections.
-  - Implemented the lightweight dataset download mode (~10MB total) to respect mobile data limits.
-  - Implemented the modular preprocessing pipeline:
-    - Zero-phase Butterworth lowpass/highpass/bandpass filters and Notch filter.
-    - DWT soft-thresholding Wavelet denoising (`db4`).
-    - Z-score, Min-max, and Robust normalizers.
-    - Fixed, sliding window, and Pan-Tompkins beat-based segmenters.
-    - DBSCAN anomaly detection and SMOTE-ENN balancing.
-  - Created the interactive Jupyter playground notebook `01_data_management_and_preprocessing.ipynb`.
-  - Verified the entire suite using 18 test assertions in `test_preprocessing.py`.
+This log documents key milestones, experimental trials, and environment configurations for the Temporal Encoder module.
 
 ---
 
@@ -65,6 +38,3 @@ This log documents key milestones, experimental trials, and environment configur
   - Added Adam weight decay of $1\times 10^{-4}$ L2 regularization.
   - Integrated `ReduceLROnPlateau` learning rate scheduler and an early stopping patience guard of $7$ epochs.
   - Launched the final training loop on the full PTB-XL dataset (17,418 training records) under a new experiment `ECG_TemporalEncoder_Optimized` tracked in MLflow.
-
-
-
