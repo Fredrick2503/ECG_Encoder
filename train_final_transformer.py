@@ -28,14 +28,18 @@ def train_final_transformer(args):
         pass
 
     # 1. Load Data
-    print(f"\nLoading the FULL PTB-XL dataset ({args.resolution} resolution)...")
+    print(f"\nLoading the FULL PTB-XL dataset ({args.resolution} resolution, balance_mode={args.balance_mode})...")
+    bal_mode = None if args.balance_mode == "none" else args.balance_mode
     train_ds, val_ds, test_ds, loader = DatasetFactory.create_datasets(
         dataset_type="ptbxl",
         download=False,
-        resolution=args.resolution
+        resolution=args.resolution,
+        balance_mode=bal_mode
     )
 
     print(f"Loaded records: Train={len(train_ds)}, Val={len(val_ds)}, Test={len(test_ds)}")
+    num_classes = len(loader.label_encoder.classes)
+    print(f"Classes: {loader.label_encoder.classes} (num_classes={num_classes})")
 
     # Reduce batch size and set num_workers to 0 to keep system load extremely light
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
@@ -55,11 +59,11 @@ def train_final_transformer(args):
         num_layers=args.num_layers,
         dim_feedforward=args.dim_feedforward,
         dropout=args.dropout,
-        num_classes=5
+        num_classes=num_classes
     ).to(device)
 
     # Start MLflow run
-    run_name = f"final_transformer_full_dataset_bs{args.batch_size}_epochs{args.epochs}"
+    run_name = f"final_transformer_full_dataset_bs{args.batch_size}_epochs{args.epochs}_bal_{args.balance_mode}"
     print(f"\n==================================================")
     print(f"Starting Final Run: {run_name}")
     print(f"Targeting parameters from Trial 3: d_model={args.d_model}, nhead={args.nhead}, layers={args.num_layers}, lr={args.lr}")
@@ -78,7 +82,9 @@ def train_final_transformer(args):
             "resolution": args.resolution,
             "batch_size": args.batch_size,
             "num_workers": args.num_workers,
-            "loss_type": args.loss_type
+            "loss_type": args.loss_type,
+            "balance_mode": args.balance_mode,
+            "num_classes": num_classes
         })
 
         if args.loss_type == "focal":
@@ -194,6 +200,7 @@ if __name__ == "__main__":
     parser.add_argument("--weight_decay", type=float, default=1e-05)
     parser.add_argument("--epochs", type=int, default=40, help="Higher training budget with early stopping")
     parser.add_argument("--loss_type", type=str, default="bce", choices=["bce", "focal", "asl"], help="Loss function type")
+    parser.add_argument("--balance_mode", type=str, default="none", choices=["none", "average", "max", "min", "binary"], help="Data balancing/filtering mode")
 
     args = parser.parse_args()
     train_final_transformer(args)
