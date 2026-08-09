@@ -52,7 +52,7 @@ def main():
     existing_filenames = set()
     if subfolder_path.exists():
         for root, _, files in os.walk(subfolder_path):
-            for f in files:
+            for f in files[:10]:
                 if f.endswith(".hea"):
                     p = Path(root) / f
                     rel = p.relative_to(loader.root_dir)

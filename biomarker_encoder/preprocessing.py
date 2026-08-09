@@ -95,6 +95,9 @@ class BiomarkerPreprocessor:
         # Extract features
         X = df[self.feature_cols].copy()
         
+        # Create binary mask (1.0 if exists, 0.0 if missing)
+        M = (~X.isna()).astype(np.float32).values
+        
         # Perform outlier handling (clip to 1st and 99th percentiles)
         for col in X.columns:
             if X[col].dtype in [np.float32, np.float64, np.int32, np.int64]:
@@ -112,6 +115,9 @@ class BiomarkerPreprocessor:
         # Normalize
         X_scaled = self.scaler.fit_transform(X_imputed)
         
+        # Concatenate scaled features and binary mask
+        X_combined = np.hstack([X_scaled, M])
+        
         # Map labels for downstream evaluation
         # PTB-XL uses multi-hot diagnostic superclasses.
         # If diagnostic_superclasses contains NORM, MI, etc., we parse them.
@@ -123,7 +129,7 @@ class BiomarkerPreprocessor:
                     if label in val:
                         y[idx, c_idx] = 1.0
                         
-        return X_scaled, y, df
+        return X_combined, y, df
 
     def get_splits(self, X, y, patient_ids=None):
         """Train/Val/Test split grouped by patient_id to prevent data leakage."""
@@ -152,9 +158,9 @@ class BiomarkerPreprocessor:
             return X_train, X_val, X_test, y_train, y_val, y_test
 
     def get_dataloaders(self, X_train, X_val, X_test, y_train, y_val, y_test, batch_size=32):
-        train_dataset = ECGFeatureDataset(X_train)
-        val_dataset = ECGFeatureDataset(X_val)
-        test_dataset = ECGFeatureDataset(X_test)
+        train_dataset = ECGFeatureDataset(X_train, y_train)
+        val_dataset = ECGFeatureDataset(X_val, y_val)
+        test_dataset = ECGFeatureDataset(X_test, y_test)
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, drop_last=False)

@@ -178,7 +178,8 @@ def main():
         
         # Calculate t-SNE coordinates for visualization
         logger.info(f"Computing t-SNE for {model_type}...")
-        tsne = TSNE(n_components=2, random_state=42)
+        perplexity = min(30, max(1, len(test_embeddings) - 1))
+        tsne = TSNE(n_components=2, perplexity=perplexity, random_state=42)
         tsne_coords = tsne.fit_transform(test_embeddings)
         
         visualizations_data[model_type] = {
@@ -208,15 +209,17 @@ def main():
         
         f.write("## Executive Summary\n\n")
         f.write(f"We trained, tuned, and compared three latent representation learning models on {len(X_scaled)} ECG biomarker feature profiles. ")
+        f.write("The models were updated to support joint feature reconstruction and direct diagnostic classification using imputed inputs + binary missingness masks.\n\n")
         f.write(f"Based on reconstruction error (MSE), **{best_model_name}** is the recommended model.\n\n")
         
         f.write("## Performance Metrics Comparison\n\n")
-        f.write("| Model Type | Params | Reconstruction MSE | Reconstruction MAE | Latent Silhouette | Downstream F1 Score | Downstream ROC-AUC | Training Time (s) | Inference Time / Sample (s) |\n")
-        f.write("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
+        f.write("| Model Type | Params | Reconstruction MSE | Reconstruction MAE | Latent Silhouette | Downstream F1 Score | Downstream ROC-AUC | Direct F1 Score | Direct ROC-AUC | Training Time (s) | Inference Time / Sample (s) |\n")
+        f.write("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
         for _, row in results_df.iterrows():
             f.write(
                 f"| {row['model_type']} | {row['num_parameters']:,} | {row['MSE']:.6f} | {row['MAE']:.6f} | "
                 f"{row['Silhouette_Score']:.4f} | {row['Downstream_F1_Score']:.4f} | {row['Downstream_ROC_AUC']:.4f} | "
+                f"{row['Direct_F1_Score']:.4f} | {row['Direct_ROC_AUC']:.4f} | "
                 f"{row['total_training_time']:.2f} | {row['inference_time_per_sample']:.6f} |\n"
             )
         f.write("\n")
@@ -227,6 +230,7 @@ def main():
         f.write("2. **Latent Space Clusterability**: The Silhouette Score evaluates how well the latent representation aligns with clinical labels. ")
         f.write("Models with positive Silhouette scores learn structured manifolds that reflect downstream pathology.\n")
         f.write("3. **Downstream Classification**: Training a simple classifier directly on the latent 32-dim representation verifies the downstream clinical utility of the representation.\n")
+        f.write("4. **Direct Classification**: Evaluating the model's internal classification head shows how well the model jointly learns reconstruction and classification.\n")
         
     logger.info("====================================================")
     logger.info("Experiment Completed Successfully!")

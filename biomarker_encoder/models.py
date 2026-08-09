@@ -23,7 +23,7 @@ class ResidualBlock(nn.Module):
 
 
 class AttentionMLPAutoencoder(nn.Module):
-    def __init__(self, input_dim: int, latent_dim: int = 32, dropout: float = 0.3, num_heads: int = 4, hidden_units: int = 128):
+    def __init__(self, input_dim: int, latent_dim: int = 32, dropout: float = 0.3, num_heads: int = 4, hidden_units: int = 128, num_classes: int = 5):
         super().__init__()
         # Encoder
         self.bn = nn.BatchNorm1d(input_dim)
@@ -40,12 +40,15 @@ class AttentionMLPAutoencoder(nn.Module):
         self.enc3 = nn.Linear(hidden_units, 64)
         self.enc4 = nn.Linear(64, latent_dim)
         
-        # Decoder
+        # Decoder (reconstructs only original features: input_dim // 2)
         self.dec1 = nn.Linear(latent_dim, 32)
         self.dec2 = nn.Linear(32, 64)
         self.dec3 = nn.Linear(64, hidden_units)
         self.dec4 = nn.Linear(hidden_units, 256)
-        self.dec_out = nn.Linear(256, input_dim)
+        self.dec_out = nn.Linear(256, input_dim // 2)
+        
+        # Classification Head
+        self.classifier = nn.Linear(latent_dim, num_classes)
 
     def encode(self, x):
         x = self.bn(x)
@@ -75,7 +78,8 @@ class AttentionMLPAutoencoder(nn.Module):
     def forward(self, x):
         latent = self.encode(x)
         reconstructed = self.decode(latent)
-        return reconstructed, latent
+        class_logits = self.classifier(latent)
+        return reconstructed, latent, class_logits
 
 
 # =====================================================================
@@ -83,7 +87,7 @@ class AttentionMLPAutoencoder(nn.Module):
 # =====================================================================
 
 class BetaVAE(nn.Module):
-    def __init__(self, input_dim: int, latent_dim: int = 32, hidden_units: int = 128, beta: float = 1.0):
+    def __init__(self, input_dim: int, latent_dim: int = 32, hidden_units: int = 128, beta: float = 1.0, num_classes: int = 5):
         super().__init__()
         self.beta = beta
         
@@ -98,12 +102,15 @@ class BetaVAE(nn.Module):
         self.fc_mu = nn.Linear(32, latent_dim)
         self.fc_logvar = nn.Linear(32, latent_dim)
         
-        # Decoder
+        # Decoder (reconstructs only original features: input_dim // 2)
         self.dec1 = nn.Linear(latent_dim, 32)
         self.dec2 = nn.Linear(32, 64)
         self.dec3 = nn.Linear(64, hidden_units)
         self.dec4 = nn.Linear(hidden_units, 256)
-        self.dec_out = nn.Linear(256, input_dim)
+        self.dec_out = nn.Linear(256, input_dim // 2)
+        
+        # Classification Head
+        self.classifier = nn.Linear(latent_dim, num_classes)
 
     def encode(self, x):
         x = self.bn(x)
@@ -133,7 +140,8 @@ class BetaVAE(nn.Module):
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         reconstructed = self.decode(z)
-        return reconstructed, z, mu, logvar
+        class_logits = self.classifier(mu)  # Use mu for classification
+        return reconstructed, z, mu, logvar, class_logits
 
     def loss_function(self, recon_x, x, mu, logvar):
         recon_loss = F.mse_loss(recon_x, x, reduction='mean')
@@ -150,22 +158,18 @@ class BetaVAE(nn.Module):
 class FeatureTokenizer(nn.Module):
     def __init__(self, num_features: int, d_model: int):
         super().__init__()
-        # Learnable weights and biases for each feature
         self.weight = nn.Parameter(torch.randn(num_features, d_model))
         self.bias = nn.Parameter(torch.randn(num_features, d_model))
         self.num_features = num_features
 
     def forward(self, x):
-        # x shape: [Batch, NumFeatures]
-        # output shape: [Batch, NumFeatures, d_model]
-        # x[:, None, :] expands to [Batch, 1, NumFeatures] -> transpose to [Batch, NumFeatures, 1]
         x_unsqueezed = x.unsqueeze(-1)  # [Batch, NumFeatures, 1]
         tokens = x_unsqueezed * self.weight.unsqueeze(0) + self.bias.unsqueeze(0)
         return tokens
 
 
 class FTTransformerAutoencoder(nn.Module):
-    def __init__(self, input_dim: int, latent_dim: int = 32, d_model: int = 64, nhead: int = 4, num_layers: int = 2, ffn_dim: int = 128, dropout: float = 0.2):
+    def __init__(self, input_dim: int, latent_dim: int = 32, d_model: int = 64, nhead: int = 4, num_layers: int = 2, ffn_dim: int = 128, dropout: float = 0.2, num_classes: int = 5):
         super().__init__()
         self.tokenizer = FeatureTokenizer(input_dim, d_model)
         
@@ -185,11 +189,14 @@ class FTTransformerAutoencoder(nn.Module):
         self.enc_fc2 = nn.Linear(64, latent_dim)
         self.relu = nn.ReLU()
         
-        # Decoder
+        # Decoder (reconstructs only original features: input_dim // 2)
         self.dec1 = nn.Linear(latent_dim, 64)
         self.dec2 = nn.Linear(64, 128)
         self.dec3 = nn.Linear(128, 256)
-        self.dec_out = nn.Linear(256, input_dim)
+        self.dec_out = nn.Linear(256, input_dim // 2)
+        
+        # Classification Head
+        self.classifier = nn.Linear(latent_dim, num_classes)
 
     def encode(self, x):
         # Tokenize features
@@ -221,4 +228,5 @@ class FTTransformerAutoencoder(nn.Module):
     def forward(self, x):
         latent = self.encode(x)
         reconstructed = self.decode(latent)
-        return reconstructed, latent
+        class_logits = self.classifier(latent)
+        return reconstructed, latent, class_logits

@@ -99,6 +99,9 @@ Completed:
 * Implemented Squeeze-and-Excitation (SE) channel attention block class (`SqueezeExcitation1D` in `temporal_encoder/encoder_upgrades.py`) and integrated it into the `ECGResNet1D` blocks.
 * Trained an optimized ResNet model with SE attention and Asymmetric Loss, and an optimized Transformer model with Asymmetric Loss on the full PTB-XL dataset.
 * Developed the `ensemble_eval.py` script to ensemble models, grid search for optimal weights, optimize per-class validation thresholds, and evaluate final test performance.
+* Upgraded the Biomarker Encoder pipeline with robust missing-value handling: implements median imputation and binary missingness masks (present/missing) concatenated into a joint 2*N feature representation.
+* Upgraded the Attention MLP, Beta-VAE, and FT-Transformer models with classification heads to jointly perform biomarker reconstruction (latent clustering embeddings) and direct multi-label diagnostic classification.
+* Created an interactive demonstration and verification notebook `notebooks/biomarker_joint_learning_demo.ipynb`.
 
 
 

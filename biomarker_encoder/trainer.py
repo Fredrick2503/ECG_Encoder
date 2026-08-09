@@ -34,18 +34,26 @@ class BiomarkerTrainer:
     def train_epoch(self, dataloader):
         self.model.train()
         total_loss = 0.0
-        for batch_x, _ in dataloader:
+        for batch_x, batch_y in dataloader:
             batch_x = batch_x.to(self.device)
+            batch_y = batch_y.to(self.device)
             self.optimizer.zero_grad()
+            
+            N = batch_x.size(1) // 2
+            orig_x = batch_x[:, :N]
             
             # Autocast mixed precision
             with torch.cuda.amp.autocast(enabled=self.mixed_precision):
                 if hasattr(self.model, "loss_function"):  # VAE
-                    reconstructed, latent, mu, logvar = self.model(batch_x)
-                    loss, recon_loss, kld_loss = self.model.loss_function(reconstructed, batch_x, mu, logvar)
+                    reconstructed, latent, mu, logvar, class_logits = self.model(batch_x)
+                    vae_loss, recon_loss, kld_loss = self.model.loss_function(reconstructed, orig_x, mu, logvar)
+                    class_loss = nn.functional.binary_cross_entropy_with_logits(class_logits, batch_y)
+                    loss = vae_loss + class_loss
                 else:  # Standard Autoencoders
-                    reconstructed, latent = self.model(batch_x)
-                    loss = nn.functional.mse_loss(reconstructed, batch_x)
+                    reconstructed, latent, class_logits = self.model(batch_x)
+                    recon_loss = nn.functional.mse_loss(reconstructed, orig_x)
+                    class_loss = nn.functional.binary_cross_entropy_with_logits(class_logits, batch_y)
+                    loss = recon_loss + class_loss
             
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer)
@@ -59,16 +67,24 @@ class BiomarkerTrainer:
         self.model.eval()
         total_loss = 0.0
         with torch.no_grad():
-            for batch_x, _ in dataloader:
+            for batch_x, batch_y in dataloader:
                 batch_x = batch_x.to(self.device)
+                batch_y = batch_y.to(self.device)
+                
+                N = batch_x.size(1) // 2
+                orig_x = batch_x[:, :N]
                 
                 with torch.cuda.amp.autocast(enabled=self.mixed_precision):
                     if hasattr(self.model, "loss_function"):  # VAE
-                        reconstructed, latent, mu, logvar = self.model(batch_x)
-                        loss, recon_loss, kld_loss = self.model.loss_function(reconstructed, batch_x, mu, logvar)
+                        reconstructed, latent, mu, logvar, class_logits = self.model(batch_x)
+                        vae_loss, recon_loss, kld_loss = self.model.loss_function(reconstructed, orig_x, mu, logvar)
+                        class_loss = nn.functional.binary_cross_entropy_with_logits(class_logits, batch_y)
+                        loss = vae_loss + class_loss
                     else:  # Standard Autoencoders
-                        reconstructed, latent = self.model(batch_x)
-                        loss = nn.functional.mse_loss(reconstructed, batch_x)
+                        reconstructed, latent, class_logits = self.model(batch_x)
+                        recon_loss = nn.functional.mse_loss(reconstructed, orig_x)
+                        class_loss = nn.functional.binary_cross_entropy_with_logits(class_logits, batch_y)
+                        loss = recon_loss + class_loss
                 
                 total_loss += loss.item() * batch_x.size(0)
                 

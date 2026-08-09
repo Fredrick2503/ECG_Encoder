@@ -128,30 +128,34 @@ class BiomarkerEvaluator:
         test_inputs = []
         test_reconstructed = []
         test_embeddings = []
+        test_logits = []
         
         # Time inference
         start_time = time.time()
         with torch.no_grad():
             for batch_x, _ in test_loader:
                 batch_x = batch_x.to(self.device)
+                N = batch_x.size(1) // 2
+                orig_x = batch_x[:, :N]
                 
                 # Check VAE vs Standard
                 if hasattr(model, "loss_function"):  # VAE
-                    reconstructed, latent, mu, logvar = model(batch_x)
-                    # For VAE evaluation, we can use mu or z as latent embedding. We use mu.
+                    reconstructed, z, mu, logvar, class_logits = model(batch_x)
                     latent = mu
                 else:
-                    reconstructed, latent = model(batch_x)
+                    reconstructed, latent, class_logits = model(batch_x)
                     
-                test_inputs.append(batch_x.cpu().numpy())
+                test_inputs.append(orig_x.cpu().numpy())
                 test_reconstructed.append(reconstructed.cpu().numpy())
                 test_embeddings.append(latent.cpu().numpy())
+                test_logits.append(class_logits.cpu().numpy())
                 
         inference_time = (time.time() - start_time) / len(test_loader.dataset)
         
         test_inputs = np.concatenate(test_inputs, axis=0)
         test_reconstructed = np.concatenate(test_reconstructed, axis=0)
         test_embeddings = np.concatenate(test_embeddings, axis=0)
+        test_logits = np.concatenate(test_logits, axis=0)
         
         # Get train embeddings for downstream task
         train_embeddings = []
@@ -159,12 +163,30 @@ class BiomarkerEvaluator:
             for batch_x, _ in train_loader:
                 batch_x = batch_x.to(self.device)
                 if hasattr(model, "loss_function"):  # VAE
-                    reconstructed, latent, mu, logvar = model(batch_x)
+                    reconstructed, z, mu, logvar, class_logits = model(batch_x)
                     latent = mu
                 else:
-                    reconstructed, latent = model(batch_x)
+                    reconstructed, latent, class_logits = model(batch_x)
                 train_embeddings.append(latent.cpu().numpy())
         train_embeddings = np.concatenate(train_embeddings, axis=0)
+        
+        # Calculate direct classification metrics
+        # Apply sigmoid to logits to get probabilities
+        test_probs = 1.0 / (1.0 + np.exp(-test_logits))
+        test_preds = (test_probs >= 0.5).astype(float)
+        
+        direct_acc = accuracy_score(y_test, test_preds)
+        direct_f1 = f1_score(y_test, test_preds, average="macro", zero_division=0)
+        try:
+            direct_auc = roc_auc_score(y_test, test_probs, average="macro")
+        except Exception:
+            direct_auc = np.nan
+            
+        direct_metrics = {
+            "Direct_Accuracy": float(direct_acc),
+            "Direct_F1_Score": float(direct_f1),
+            "Direct_ROC_AUC": float(direct_auc)
+        }
         
         # Calculate all metrics
         recon_metrics = self.get_reconstruction_metrics(test_inputs, test_reconstructed)
@@ -178,7 +200,8 @@ class BiomarkerEvaluator:
             **recon_metrics,
             **latent_metrics,
             **stability_metrics,
-            **downstream_metrics
+            **downstream_metrics,
+            **direct_metrics
         }
         
         return results, test_embeddings, test_reconstructed, test_inputs
