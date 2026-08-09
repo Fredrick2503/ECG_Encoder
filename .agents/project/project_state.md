@@ -102,6 +102,7 @@ Completed:
 * Upgraded the Biomarker Encoder pipeline with robust missing-value handling: implements median imputation and binary missingness masks (present/missing) concatenated into a joint 2*N feature representation.
 * Upgraded the Attention MLP, Beta-VAE, and FT-Transformer models with classification heads to jointly perform biomarker reconstruction (latent clustering embeddings) and direct multi-label diagnostic classification.
 * Created an interactive demonstration and verification notebook `notebooks/biomarker_joint_learning_demo.ipynb`.
+* Re-validated and configured the virtual environment (`.venv`) inheriting system site packages. Appended `optuna` to `requirements.txt` and verified package imports.
 
 
 
