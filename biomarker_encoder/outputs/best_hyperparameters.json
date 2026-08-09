@@ -1,0 +1,27 @@
+{
+    "attention_mlp": {
+        "lr": 0.0010127794141480254,
+        "weight_decay": 3.4980159936954916e-05,
+        "latent_dim": 32,
+        "hidden_units": 128,
+        "dropout": 0.13322574688913572,
+        "num_heads": 2
+    },
+    "beta_vae": {
+        "lr": 0.00020365402811568635,
+        "weight_decay": 1.0939721324120251e-06,
+        "latent_dim": 16,
+        "hidden_units": 192,
+        "beta": 0.8327287897533237
+    },
+    "ft_transformer": {
+        "lr": 0.0017101939202296447,
+        "weight_decay": 3.5615414410411777e-06,
+        "latent_dim": 64,
+        "d_model": 64,
+        "nhead": 2,
+        "num_layers": 2,
+        "ffn_dim": 128,
+        "dropout": 0.11388733618383105
+    }
+}
