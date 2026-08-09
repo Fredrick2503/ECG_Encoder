@@ -1,6 +1,6 @@
 # ECG Biomarker Encoder Benchmarking Report
 
-Generated at: 2026-08-09 23:00:43
+Generated at: 2026-08-09 23:09:32
 
 ## Executive Summary
 
@@ -12,9 +12,9 @@ Based on reconstruction error (MSE), **attention_mlp** is the recommended model.
 
 | Model Type | Params | Reconstruction MSE | Reconstruction MAE | Latent Silhouette | Downstream F1 Score | Downstream ROC-AUC | Direct F1 Score | Direct ROC-AUC | Training Time (s) | Inference Time / Sample (s) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| attention_mlp | 408,487 | 0.914655 | 0.690287 | -0.0711 | 0.1528 | 0.6638 | 0.3211 | 0.8331 | 1.41 | 0.000291 |
-| beta_vae | 311,559 | 0.947364 | 0.704219 | 0.0557 | 0.1668 | 0.6489 | 0.3431 | 0.8324 | 2.01 | 0.000308 |
-| ft_transformer | 177,791 | 0.966264 | 0.709030 | -0.0836 | 0.1111 | 0.4473 | 0.1822 | 0.7735 | 168.71 | 0.003501 |
+| attention_mlp | 408,487 | 0.927363 | 0.697528 | -0.0372 | 0.1354 | 0.6551 | 0.2122 | 0.8330 | 0.91 | 0.000101 |
+| beta_vae | 311,559 | 0.980110 | 0.718536 | -0.0074 | 0.1248 | 0.3456 | 0.2975 | 0.8157 | 0.64 | 0.000048 |
+| ft_transformer | 177,791 | 0.968167 | 0.715365 | 0.1091 | 0.1327 | 0.3608 | 0.2678 | 0.7610 | 142.16 | 0.004298 |
 
 ## Recommendation & Analysis
 

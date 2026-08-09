@@ -35,8 +35,10 @@ class BiomarkerPreprocessor:
         if "diagnostic_superclasses" not in df.columns and "scp_codes" in df.columns:
             import ast
             import os
-            scp_csv_path = "data/raw/ptbxl/scp_statements.csv"
-            if os.path.exists(scp_csv_path):
+            from pathlib import Path
+            project_root = Path(__file__).resolve().parents[1]
+            scp_csv_path = project_root / "data" / "raw" / "ptbxl" / "scp_statements.csv"
+            if scp_csv_path.exists():
                 scp_df = pd.read_csv(scp_csv_path, index_col=0)
                 code_to_class = scp_df["diagnostic_class"].dropna().to_dict()
                 
