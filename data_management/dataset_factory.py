@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from config.config import PTBXL_CONFIG, DATASET_NAME
 from data_management.downloader import PTBXLDownloader
 from data_management.loader import PTBXLLoader
-from data_management.label_encoder import PTBXLLabelEncoder
+from data_management.label_encoder import PTBXLLabelEncoder, BinaryLabelEncoder
 from data_management.splitter import PTBXLFoldSplitter
 from data_management.sample_builder import ECGDataset
 
@@ -19,7 +19,8 @@ class DatasetFactory:
         resolution: str = "hr",
         preprocessor: Optional[Any] = None,
         transform: Optional[Callable] = None,
-        data_dir: Optional[Path] = None
+        data_dir: Optional[Path] = None,
+        balance_mode: Optional[str] = None
     ) -> Tuple[ECGDataset, ECGDataset, ECGDataset, PTBXLLoader]:
         """
         Creates train, validation, and test ECGDatasets.
@@ -49,7 +50,10 @@ class DatasetFactory:
             downloader.download()
             
         # Instantiate Label Encoder
-        label_encoder = PTBXLLabelEncoder(classes=cfg["classes"])
+        if balance_mode == "binary":
+            label_encoder = BinaryLabelEncoder()
+        else:
+            label_encoder = PTBXLLabelEncoder(classes=cfg["classes"])
         
         # Instantiate Loader
         loader = PTBXLLoader(
@@ -64,6 +68,7 @@ class DatasetFactory:
         # Filter metadata_df to only include records that exist physically on disk
         import os
         import pandas as pd
+        import numpy as np
         
         target_subfolder = "records500" if resolution == "hr" else "records100"
         subfolder_path = cfg["raw_dir"] / target_subfolder
@@ -92,6 +97,46 @@ class DatasetFactory:
             test_df["strat_fold"] = 10
             metadata_df = pd.concat([train_df, val_df, test_df])
             
+        # Apply downsampling of NORM if balance_mode is average, max, or min
+        if balance_mode in ["average", "max", "min"]:
+            classes_to_check = [c for c in cfg["classes"] if c != "NORM"]
+            class_occurrences = {c: 0 for c in classes_to_check}
+            
+            for idx in metadata_df.index:
+                row = metadata_df.loc[idx]
+                diag_classes = loader.parser.get_diagnostic_classes(row.get("scp_codes", {}))
+                for c in diag_classes:
+                    if c in class_occurrences:
+                        class_occurrences[c] += 1
+                        
+            counts_list = list(class_occurrences.values())
+            if balance_mode == "average":
+                target_norm_count = int(np.mean(counts_list))
+            elif balance_mode == "max":
+                target_norm_count = int(np.max(counts_list))
+            elif balance_mode == "min":
+                target_norm_count = int(np.min(counts_list))
+                
+            norm_record_ids = []
+            other_record_ids = []
+            
+            for idx in metadata_df.index:
+                row = metadata_df.loc[idx]
+                diag_classes = loader.parser.get_diagnostic_classes(row.get("scp_codes", {}))
+                if "NORM" in diag_classes:
+                    norm_record_ids.append(idx)
+                else:
+                    other_record_ids.append(idx)
+                    
+            np.random.seed(42)
+            if len(norm_record_ids) > target_norm_count:
+                selected_norm_ids = np.random.choice(norm_record_ids, size=target_norm_count, replace=False)
+            else:
+                selected_norm_ids = np.array(norm_record_ids)
+                
+            keep_ids = list(selected_norm_ids) + other_record_ids
+            metadata_df = metadata_df.loc[keep_ids]
+
         # Split using standard PTB-XL splitter
         splitter = PTBXLFoldSplitter()
         train_df, val_df, test_df = splitter.split(metadata_df)
@@ -128,7 +173,8 @@ class DatasetFactory:
         batch_size: int = 32,
         num_workers: int = 0,
         pin_memory: bool = False,
-        data_dir: Optional[Path] = None
+        data_dir: Optional[Path] = None,
+        balance_mode: Optional[str] = None
     ) -> Tuple[DataLoader, DataLoader, DataLoader, PTBXLLoader]:
         """
         Creates train, validation, and test PyTorch DataLoaders.
@@ -143,7 +189,8 @@ class DatasetFactory:
             resolution=resolution,
             preprocessor=preprocessor,
             transform=transform,
-            data_dir=data_dir
+            data_dir=data_dir,
+            balance_mode=balance_mode
         )
         
         train_loader = DataLoader(
@@ -169,3 +216,4 @@ class DatasetFactory:
         )
         
         return train_loader, val_loader, test_loader, loader
+

@@ -56,3 +56,29 @@ class PTBXLLabelEncoder(BaseLabelEncoder):
             if val >= threshold:
                 decoded.append(self.classes[i])
         return decoded
+
+
+class BinaryLabelEncoder(BaseLabelEncoder):
+    """Encodes multi-label PTB-XL classes into a binary format (NORM vs ABNORM)."""
+    
+    def __init__(self):
+        self.classes = ["NORM", "ABNORM"]
+        self.num_classes = 2
+
+    def encode(self, diagnostic_classes: List[str]) -> np.ndarray:
+        vector = np.zeros(2, dtype=np.float32)
+        # Check if any abnormal class is present
+        has_abnorm = any(c in ["MI", "STTC", "CD", "HYP"] for c in diagnostic_classes)
+        if has_abnorm:
+            vector[1] = 1.0  # ABNORM
+        else:
+            vector[0] = 1.0  # NORM
+        return vector
+
+    def decode(self, encoded: np.ndarray, threshold: float = 0.5) -> List[str]:
+        decoded = []
+        for i, val in enumerate(encoded):
+            if val >= threshold:
+                decoded.append(self.classes[i])
+        return decoded
+

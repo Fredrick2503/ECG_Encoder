@@ -70,19 +70,14 @@ Always follow:
 - Layered architecture
 - Clear module ownership
 
----
-
 # Files to Maintain
 
-Update these files as needed:
+Update these files as needed inside the feature-specific design directory (e.g., `docs/<feature_name>/`):
 
-.agents/project/
+- `HLD.md`
+- `LLD.md`
 
-architecture.md
-
-hld.md
-
-lld.md
+Where `<feature_name>` matches the module being worked on (e.g., `data_management`, `preprocessing`, `temporal_encoder`).
 
 Only update the files affected by the current architectural change.
 
