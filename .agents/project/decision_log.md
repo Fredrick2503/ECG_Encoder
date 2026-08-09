@@ -116,3 +116,19 @@ The following components remain planned only:
 * Deployment
 
 They will not be designed or implemented until the roadmap is officially extended.
+
+---
+
+### DEC-009
+
+**Decision:** Speed up the training sweep by reducing epochs and increasing batch size.
+
+**Status:** Accepted
+
+**Details:**
+* **Epochs per trial**: Reduced from 25 to 15.
+* **Batch size**: Increased from 64 to 128 (to leverage GPU parallelism more effectively).
+* **Dataset Size**: Continued on 1000 records.
+
+**Reason:**
+To reduce the overall sweep duration from ~10.3 hours to ~2–3 hours. Since early stopping typically triggers within 10-12 epochs, a max-epoch limit of 15 maintains training quality while providing a massive speedup, and larger batches accelerate execution per epoch without performance degradation on this dataset size.

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
+import warnings
 import numpy as np
 import scipy.signal
 import pywt
@@ -83,8 +84,15 @@ class NotchFilter(PreprocessingStep):
     def process(self, signal: np.ndarray, sampling_rate: int) -> np.ndarray:
         nyquist = 0.5 * sampling_rate
         w0 = self.notch_freq / nyquist
+
+        if not (0.0 < w0 < 1.0):
+            warnings.warn(
+                f"Notch frequency {self.notch_freq} Hz is not valid for sampling rate {sampling_rate} Hz. "
+                f"Skipping NotchFilter. Valid normalized frequency must satisfy 0 < w0 < 1."
+            )
+            return signal
+
         b, a = scipy.signal.iirnotch(w0, self.Q)
-        
         filtered = np.zeros_like(signal)
         for i in range(signal.shape[0]):
             filtered[i] = scipy.signal.filtfilt(b, a, signal[i])
