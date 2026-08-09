@@ -61,15 +61,26 @@ class BiomarkerPreprocessor:
             "RR_Skewness", "RR_Kurtosis", "Mean_HR", "HR_STD", "Min_HR", "Max_HR", "SDNN", "RMSSD", "SDSD", "pNN50",
             "LF_Power", "HF_Power", "LF_HF_Ratio", "SD1", "SD2", "SD1_SD2_Ratio", "Sample_Entropy"
         ]
-        morphology_features = [
+        
+        leads = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
+        base_morphology = [
             "PR_Interval", "QRS_Duration", "QT_Interval", "QTc_Bazett", "QTc_Fridericia", "ST_Duration",
             "P_Amplitude", "R_Amplitude", "S_Amplitude", "T_Amplitude", "R_S_Ratio", "QRS_Area", "QRS_Energy",
             "T_wave_Area", "ST_Slope", "QT_Variability", "QT_Dispersion", "Tp_e_Interval", "Tp_e_QT_Ratio",
             "RR_QT_Correlation", "RR_QT_Covariance"
         ]
         
-        # Verify columns exist in the DataFrame (some names might be slightly different like T_wave_Area vs T_wave_Area)
-        # Let's map any small differences dynamically
+        # Build lead-specific morphology feature names for all 12 leads
+        morphology_features = []
+        for lead in leads:
+            for feat in base_morphology:
+                morphology_features.append(f"{lead}_{feat}")
+        
+        # Fallback to non-prefixed features for compatibility
+        for feat in base_morphology:
+            morphology_features.append(feat)
+        
+        # Verify columns exist in the DataFrame
         all_candidate_cols = demographics + hrv_features + morphology_features
         available_cols = []
         for col in all_candidate_cols:

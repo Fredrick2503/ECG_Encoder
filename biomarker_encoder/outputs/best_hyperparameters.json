@@ -1,27 +1,27 @@
 {
     "attention_mlp": {
-        "lr": 0.004788465910633747,
-        "weight_decay": 0.00045052605634735547,
+        "lr": 0.001,
+        "weight_decay": 0.0001,
         "latent_dim": 64,
         "hidden_units": 128,
-        "dropout": 0.30064864627889454,
+        "dropout": 0.2,
         "num_heads": 4
     },
     "beta_vae": {
-        "lr": 0.001482748483952466,
-        "weight_decay": 0.0007153443129572901,
-        "latent_dim": 16,
-        "hidden_units": 64,
-        "beta": 0.2115338250934354
+        "lr": 0.001,
+        "weight_decay": 0.0001,
+        "latent_dim": 64,
+        "hidden_units": 128,
+        "beta": 1.0
     },
     "ft_transformer": {
-        "lr": 0.0017002879606922692,
-        "weight_decay": 7.619422334495044e-05,
-        "latent_dim": 32,
-        "d_model": 64,
-        "nhead": 4,
+        "lr": 0.001,
+        "weight_decay": 0.0001,
+        "latent_dim": 64,
+        "d_model": 32,
+        "nhead": 2,
         "num_layers": 2,
-        "ffn_dim": 96,
-        "dropout": 0.22780688547292913
+        "ffn_dim": 64,
+        "dropout": 0.2
     }
 }

@@ -21,15 +21,42 @@ logger = logging.getLogger("FullFeatureExtraction")
 def extract_features_for_record(record_id, loader, extractor):
     try:
         record = loader.load_record(record_id)
-        # We extract features using lead II (index 1 in standard 12-lead ECG: I, II, III...)
-        lead_ii_signal = record.signal[1, :]
+        all_features = {"ecg_id": record_id}
         
-        # Extract features
-        features, _ = extractor._extract_single_lead(lead_ii_signal)
-        features["ecg_id"] = record_id
-        return features
+        # HRV features are global and can be extracted from Lead II (index 1)
+        lead_ii_signal = record.signal[1, :]
+        lead_ii_features, _ = extractor._extract_single_lead(lead_ii_signal)
+        
+        hrv_keys = [
+            "RR_Mean", "RR_Median", "RR_Min", "RR_Max", "RR_Range", "RR_STD", "RR_Variance", "RR_CV", "RR_IQR",
+            "RR_Skewness", "RR_Kurtosis", "Mean_HR", "HR_STD", "Min_HR", "Max_HR", "SDNN", "RMSSD", "SDSD", "pNN50",
+            "LF_Power", "HF_Power", "LF_HF_Ratio", "SD1", "SD2", "SD1_SD2_Ratio", "Sample_Entropy"
+        ]
+        
+        for k in hrv_keys:
+            if k in lead_ii_features:
+                all_features[k] = lead_ii_features[k]
+                
+        # Lead names mapping (standard 12-lead ECG)
+        leads = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
+        
+        morphology_keys = [
+            "PR_Interval", "QRS_Duration", "QT_Interval", "QTc_Bazett", "QTc_Fridericia", "ST_Duration",
+            "P_Amplitude", "R_Amplitude", "S_Amplitude", "T_Amplitude", "R_S_Ratio", "QRS_Area", "QRS_Energy",
+            "T_wave_Area", "ST_Slope", "QT_Variability", "QT_Dispersion", "Tp_e_Interval", "Tp_e_QT_Ratio",
+            "RR_QT_Correlation", "RR_QT_Covariance"
+        ]
+        
+        # Loop through all 12 leads and extract morphology features
+        for idx, lead_name in enumerate(leads):
+            lead_signal = record.signal[idx, :]
+            lead_features, _ = extractor._extract_single_lead(lead_signal)
+            for k in morphology_keys:
+                if k in lead_features:
+                    all_features[f"{lead_name}_{k}"] = lead_features[k]
+                    
+        return all_features
     except Exception as e:
-        # Return dict with NaN features to keep index alignment
         return {"ecg_id": record_id, "error": str(e)}
 
 def main():
@@ -52,48 +79,45 @@ def main():
     existing_filenames = set()
     if subfolder_path.exists():
         for root, _, files in os.walk(subfolder_path):
-            for f in files[:10]:
+            for f in files:
                 if f.endswith(".hea"):
                     p = Path(root) / f
                     rel = p.relative_to(loader.root_dir)
                     existing_filenames.add(str(rel.with_suffix("")).replace("\\", "/"))
+                    if len(existing_filenames) >= 1000:
+                        break
+            if len(existing_filenames) >= 1000:
+                break
                     
     metadata_df = metadata_df[metadata_df["filename_hr"].isin(existing_filenames)]
     record_ids = metadata_df.index.tolist()
     
-    logger.info(f"Total existing records to extract features from: {len(record_ids)}")
+    logger.info(f"Total existing records to extract features from (max 1000): {len(record_ids)}")
     
     # Initialize extractor
     extractor = ECGFeatureExtractor(fs=500, leads="II")
     
-    logger.info("Starting Parallel Feature Extraction (this may take a few minutes)...")
+    logger.info("Starting Parallel Feature Extraction for all 12 leads (1000 records)...")
     
-    # Using joblib for parallel extraction
     results = Parallel(n_jobs=-1, prefer="processes")(
         delayed(extract_features_for_record)(rid, loader, extractor)
-        for rid in tqdm(record_ids, desc="Extracting features")
+        for rid in tqdm(record_ids, desc="Extracting 12-lead features")
     )
     
-    # Convert results to DataFrame
     results_df = pd.DataFrame(results)
     
-    # Log any errors
     if "error" in results_df.columns:
         errors = results_df[results_df["error"].notna()]
         if len(errors) > 0:
             logger.warning(f"Failed to extract features for {len(errors)} records.")
-            # Print a few examples of errors
             logger.warning(f"Sample errors: {errors['error'].head().tolist()}")
         results_df = results_df.drop(columns=["error"], errors="ignore")
         
-    # Set ecg_id as index
     results_df.set_index("ecg_id", inplace=True)
     
-    # Merge back into metadata_df
     logger.info("Merging extracted features with metadata...")
     final_df = metadata_df.join(results_df, how="inner")
     
-    # Save output
     output_dir = Path("data/processed")
     output_dir.mkdir(parents=True, exist_ok=True)
     
