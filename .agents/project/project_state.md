@@ -37,7 +37,7 @@ Build the core software infrastructure from scratch.
 | Signal Preprocessing       | DONE   | 100%     |
 | Temporal Encoder           | DONE   | 100%     |
 | Morphology Encoder         | TODO   | 0%       |
-| Biomarker Encoder          | TODO   | 0%       |
+| Biomarker Encoder          | DONE   | 100%     |
 | Fusion Engine              | TODO   | 0%       |
 | Unified Classification     | TODO   | 0%       |
 | Explainability             | TODO   | 0%       |
@@ -85,8 +85,13 @@ Completed:
 * Designed, implemented, and verified `train_optimized.py` featuring dropout regularization, ReduceLROnPlateau learning rate scheduler, weight decay, and early stopping.
 * Launched the final optimized BiLSTM training run on the full PTB-XL dataset (17,418 training records) with MAE pretraining in the background.
 * Cleaned up stalled RUNNING trials in the MLflow database and resumed the expanded parameter tuning sweep (`run_expanded_sweep.py`) starting from Trial 6 in the background.
-
-
+* Created a dedicated virtual environment (`.venv`) inheriting system site packages to reuse PyTorch and other heavy packages, avoiding large downloads.
+* Linked the full 1.8GB PTB-XL dataset via Windows directory junctions to the raw directory and validated successfully using `tests/test_real_data.py`.
+* Rebuilt the feature extraction pipeline matching the exact logic of the previous version's `extractor.py` for feature parity.
+* Implemented three autoencoder architectures (Attention MLP, Beta-VAE, and FT-Transformer) to learn compact 32-dim latent representations from 50 biomarkers.
+* Performed hyperparameter sweeps using Optuna and benchmarked the models, identifying FT-Transformer as the recommended model with lowest MSE (0.4017).
+* Exposed the embedding extraction API and built a visualization notebook.
+* Extracted demographic, HRV, and morphology features (51 dimensions) for all 21,837 records in the PTB-XL dataset and trained/tuned the Attention MLP, Beta-VAE, and FT-Transformer autoencoders on the full dataset.
 
 **Important Note**
 
