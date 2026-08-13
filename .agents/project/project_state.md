@@ -47,7 +47,7 @@ Build the core software infrastructure from scratch.
 | Evaluation & Benchmarking  | TODO   | 0%       |
 | Inference Pipeline         | TODO   | 0%       |
 | Deployment                 | TODO   | 0%       |
-| Documentation / Thesis     | IN_PROGRESS | 20%     |
+| Documentation / Thesis     | IN_PROGRESS | 30%     |
 
 ### Status Legend
 
@@ -103,6 +103,8 @@ Completed:
 * Upgraded the Attention MLP, Beta-VAE, and FT-Transformer models with classification heads to jointly perform biomarker reconstruction (latent clustering embeddings) and direct multi-label diagnostic classification.
 * Created an interactive demonstration and verification notebook `notebooks/biomarker_joint_learning_demo.ipynb`.
 * Re-validated and configured the virtual environment (`.venv`) inheriting system site packages. Appended `optuna` to `requirements.txt` and verified package imports.
+* Upgraded the ECG Feature Extractor (`biomarker_extractor.py`) to support 60 clinical biomarkers (e.g. J-point amplitude, ST-segment area, Sokolow-Lyon/Cornell indices, QRS-T angle, and secondary peaks).
+* Executed feature set comparison experiments (`run_feature_comparison.py`) comparing the old (256 dimensions) and new (606 dimensions) biomarker setups, showing lower reconstruction MSE/MAE across Attention MLP, Beta-VAE, and FT-Transformer models.
 
 
 

@@ -314,6 +314,18 @@ class ECGFeatureExtractor:
         fragmented_qrs = []
         notch_slurs = []
 
+        # Newly added beat-wise biomarkers
+        p_polarities = []
+        qrs_amplitudes = []
+        q_wave_amplitudes = []
+        j_point_amplitudes = []
+        st_segment_areas = []
+        t_wave_polarities = []
+        t_wave_peak_times = []
+        r_prime_amplitudes = []
+        s_prime_amplitudes = []
+        st_t_relationships = []
+
         for i in range(num_beats):
             r_idx = r_locs[i]
             r_amp_val = self._get_amplitude(ecg_clean, r_idx)
@@ -413,14 +425,17 @@ class ECGFeatureExtractor:
                     st_deviations.append(st_dev)
                     st_elevations.append(max(0.0, st_dev))
                     st_depressions.append(max(0.0, -st_dev))
+                    st_segment_areas.append(self._integrate_signal(st_seg - baseline, dx=1/self.fs))
                 else:
                     st_deviations.append(np.nan)
                     st_elevations.append(np.nan)
                     st_depressions.append(np.nan)
+                    st_segment_areas.append(np.nan)
             else:
                 st_deviations.append(np.nan)
                 st_elevations.append(np.nan)
                 st_depressions.append(np.nan)
+                st_segment_areas.append(np.nan)
 
             # T Wave Morphology
             if not np.isnan(t_on) and not np.isnan(t_off) and t_off > t_on:
@@ -438,16 +453,20 @@ class ECGFeatureExtractor:
                     upslope = (t_amp_v - t_on_amp) / ((t_pk - t_on) / self.fs) if t_pk > t_on else 0.0
                     downslope = (t_off_amp - t_amp_v) / ((t_off - t_pk) / self.fs) if t_off > t_pk else 0.0
                     t_slopes.append(max(abs(upslope), abs(downslope)))
+                    t_wave_peak_times.append((t_pk - t_on) / self.fs)
                 else:
                     t_symmetries.append(np.nan)
                     t_slopes.append(np.nan)
+                    t_wave_peak_times.append(np.nan)
 
                 # T inversion detection
                 t_amp = self._get_amplitude(ecg_clean, t_pk) if not np.isnan(t_pk) else np.nan
                 if not np.isnan(t_amp):
                     t_inversions.append(1.0 if (t_amp - baseline) < -0.05 else 0.0)
+                    t_wave_polarities.append(np.sign(t_amp - baseline))
                 else:
                     t_inversions.append(np.nan)
+                    t_wave_polarities.append(np.nan)
 
                 # Biphasic T-wave
                 if len(t_seg) > 0:
@@ -463,6 +482,8 @@ class ECGFeatureExtractor:
                 t_slopes.append(np.nan)
                 t_inversions.append(np.nan)
                 t_biphasics.append(np.nan)
+                t_wave_polarities.append(np.nan)
+                t_wave_peak_times.append(np.nan)
 
             # P Wave Morphology
             if not np.isnan(p_on) and not np.isnan(p_off) and p_off > p_on:
@@ -482,6 +503,11 @@ class ECGFeatureExtractor:
                 p_areas.append(np.nan)
                 p_symmetries.append(np.nan)
 
+            if not np.isnan(p_amp_val):
+                p_polarities.append(np.sign(p_amp_val - baseline))
+            else:
+                p_polarities.append(np.nan)
+
             # QRS Morphology (Q-wave)
             q_val = np.nan
             q_dur = np.nan
@@ -499,6 +525,7 @@ class ECGFeatureExtractor:
             q_depth = abs(q_val) if (q_val is not None and q_val < 0) else 0.0
             q_durations.append(q_dur if q_depth > 0 else 0.0)
             q_depths.append(q_depth)
+            q_wave_amplitudes.append(q_depth)
 
             # Pathological Q-wave
             is_pathological = 0.0
@@ -532,6 +559,40 @@ class ECGFeatureExtractor:
             else:
                 notch_slurs.append(np.nan)
 
+            # Newly added beat-wise biomarkers
+            if not np.isnan(r_amp_val) and not np.isnan(s_amp_val):
+                qrs_amplitudes.append(r_amp_val - s_amp_val)
+            elif not np.isnan(r_amp_val):
+                qrs_amplitudes.append(r_amp_val)
+            else:
+                qrs_amplitudes.append(np.nan)
+
+            j_amp = self._get_amplitude(ecg_clean, r_off) if not np.isnan(r_off) else np.nan
+            j_point_amplitudes.append(j_amp - baseline if not np.isnan(j_amp) else np.nan)
+
+            # Secondary peaks (R', S')
+            r_prime_val = 0.0
+            s_prime_val = 0.0
+            if not np.isnan(r_on) and not np.isnan(r_off) and r_off > r_on:
+                qrs_seg = ecg_clean[int(r_on):int(r_off)+1]
+                if len(qrs_seg) > 5:
+                    peaks, _ = scipy.signal.find_peaks(qrs_seg)
+                    valleys, _ = scipy.signal.find_peaks(-qrs_seg)
+                    if len(peaks) > 1:
+                        sorted_p = sorted([qrs_seg[p] for p in peaks])
+                        r_prime_val = float(sorted_p[-2]) if len(sorted_p) >= 2 else 0.0
+                    if len(valleys) > 1:
+                        sorted_v = sorted([-qrs_seg[v] for v in valleys])
+                        s_prime_val = float(sorted_v[-2]) if len(sorted_v) >= 2 else 0.0
+            r_prime_amplitudes.append(r_prime_val)
+            s_prime_amplitudes.append(s_prime_val)
+
+            # ST-T relationship
+            if len(st_slopes) > i and len(t_amps) > i and not np.isnan(st_slopes[i]) and not np.isnan(t_amps[i]):
+                st_t_relationships.append(st_slopes[i] / (t_amps[i] + 1e-8))
+            else:
+                st_t_relationships.append(np.nan)
+
         # Store beat-wise debug measurements
         debug_dict = {
             "pr_intervals": pr_intervals,
@@ -557,9 +618,11 @@ class ECGFeatureExtractor:
         mean_st_dur = np.nanmean(st_durations) if any(~np.isnan(st_durations)) else np.nan
         mean_tpe = np.nanmean(tpe_intervals) if any(~np.isnan(tpe_intervals)) else np.nan
 
-        # QTc Bazett and Fridericia
+        # QTc Bazett, Fridericia, Framingham, Hodges
         qtc_bazett = mean_qt / np.sqrt(rr_mean) if rr_mean > 0 else np.nan
         qtc_fridericia = mean_qt / np.cbrt(rr_mean) if rr_mean > 0 else np.nan
+        qtc_framingham = mean_qt + 0.154 * (1.0 - rr_mean) if rr_mean > 0 else np.nan
+        qtc_hodges = mean_qt + 0.00175 * (mean_hr - 60.0) if not np.isnan(mean_hr) else np.nan
 
         # Wave Amplitudes
         mean_p_amp = np.nanmean(p_amps) if any(~np.isnan(p_amps)) else np.nan
@@ -628,6 +691,19 @@ class ECGFeatureExtractor:
         mean_frag_qrs = np.nanmean(fragmented_qrs) if any(~np.isnan(fragmented_qrs)) else np.nan
         mean_notch_slur = np.nanmean(notch_slurs) if any(~np.isnan(notch_slurs)) else np.nan
 
+        # Newly averaged biomarkers
+        mean_p_polarity = np.nanmean(p_polarities) if any(~np.isnan(p_polarities)) else np.nan
+        mean_qrs_amplitude = np.nanmean(qrs_amplitudes) if any(~np.isnan(qrs_amplitudes)) else np.nan
+        mean_q_wave_amplitude = np.nanmean(q_wave_amplitudes) if any(~np.isnan(q_wave_amplitudes)) else np.nan
+        mean_j_point_amplitude = np.nanmean(j_point_amplitudes) if any(~np.isnan(j_point_amplitudes)) else np.nan
+        mean_st_segment_area = np.nanmean(st_segment_areas) if any(~np.isnan(st_segment_areas)) else np.nan
+        mean_t_wave_polarity = np.nanmean(t_wave_polarities) if any(~np.isnan(t_wave_polarities)) else np.nan
+        mean_t_wave_peak_time = np.nanmean(t_wave_peak_times) if any(~np.isnan(t_wave_peak_times)) else np.nan
+        mean_r_prime_amplitude = np.nanmean(r_prime_amplitudes) if any(~np.isnan(r_prime_amplitudes)) else np.nan
+        mean_s_prime_amplitude = np.nanmean(s_prime_amplitudes) if any(~np.isnan(s_prime_amplitudes)) else np.nan
+        mean_st_t_relationship = np.nanmean(st_t_relationships) if any(~np.isnan(st_t_relationships)) else np.nan
+        nn50 = np.sum(np.abs(np.diff(rr)) > 0.05) if len(rr) > 1 else 0.0
+
         # Populate output results
         res["RR_Mean"] = rr_mean
         res["RR_Median"] = rr_median
@@ -650,6 +726,7 @@ class ECGFeatureExtractor:
         res["RMSSD"] = rmssd
         res["SDSD"] = sdsd
         res["pNN50"] = pnn50
+        res["NN50"] = nn50
 
         res["LF_Power"] = lf
         res["HF_Power"] = hf
@@ -665,6 +742,8 @@ class ECGFeatureExtractor:
         res["QT_Interval"] = mean_qt
         res["QTc_Bazett"] = qtc_bazett
         res["QTc_Fridericia"] = qtc_fridericia
+        res["QTc_Framingham"] = qtc_framingham
+        res["QTc_Hodges"] = qtc_hodges
         res["ST_Duration"] = mean_st_dur
 
         res["P_Amplitude"] = mean_p_amp
@@ -704,6 +783,18 @@ class ECGFeatureExtractor:
         res["Pathological_Q_wave"] = mean_path_q
         res["Fragmented_QRS"] = mean_frag_qrs
         res["QRS_Notching_Slurring"] = mean_notch_slur
+
+        # Newly added biomarkers populated
+        res["P_wave_Polarity"] = mean_p_polarity
+        res["QRS_Amplitude"] = mean_qrs_amplitude
+        res["Q_wave_Amplitude"] = mean_q_wave_amplitude
+        res["J_point_Amplitude"] = mean_j_point_amplitude
+        res["ST_Segment_Area"] = mean_st_segment_area
+        res["T_wave_Polarity"] = mean_t_wave_polarity
+        res["T_wave_Peak_Time"] = mean_t_wave_peak_time
+        res["R_prime_Amplitude"] = mean_r_prime_amplitude
+        res["S_prime_Amplitude"] = mean_s_prime_amplitude
+        res["ST_T_Relationship"] = mean_st_t_relationship
 
         return res, debug_dict
 
@@ -902,5 +993,49 @@ class ECGFeatureExtractor:
                 t_aVF = res_aVF.get("T_Amplitude", 0.0)
                 t_axis = np.degrees(np.arctan2(t_aVF, t_I))
                 features.add("T_Axis", t_axis, "degrees", "Frontal plane T electrical axis")
+
+                diff_axis = abs(qrs_axis - t_axis)
+                qrs_t_angle = diff_axis if diff_axis <= 180 else 360.0 - diff_axis
+                features.add("QRS_T_Angle", qrs_t_angle, "degrees", "Angle between QRS and T electrical axes")
+
+        # Multi-lead global clinical features
+        sokolow = np.nan
+        cornell = np.nan
+        cornell_product = np.nan
+        
+        res_v1 = lead_results.get("V1", {})
+        res_v5 = lead_results.get("V5", {})
+        res_v6 = lead_results.get("V6", {})
+        s_v1 = abs(res_v1.get("S_Amplitude", np.nan)) if res_v1 else np.nan
+        r_v5 = abs(res_v5.get("R_Amplitude", np.nan)) if res_v5 else np.nan
+        r_v6 = abs(res_v6.get("R_Amplitude", np.nan)) if res_v6 else np.nan
+        if not np.isnan(s_v1) and (not np.isnan(r_v5) or not np.isnan(r_v6)):
+            sokolow = s_v1 + max(np.nan_to_num(r_v5), np.nan_to_num(r_v6))
+        features.add("Sokolow_Lyon_Voltage", sokolow, "mV")
+
+        res_avl = lead_results.get("aVL", {})
+        res_v3 = lead_results.get("V3", {})
+        r_avl = abs(res_avl.get("R_Amplitude", np.nan)) if res_avl else np.nan
+        s_v3 = abs(res_v3.get("S_Amplitude", np.nan)) if res_v3 else np.nan
+        if not np.isnan(r_avl) and not np.isnan(s_v3):
+            cornell = r_avl + s_v3
+        features.add("Cornell_Voltage", cornell, "mV")
+
+        qrs_dur_avl = res_avl.get("QRS_Duration", np.nan) if res_avl else np.nan
+        if not np.isnan(cornell) and not np.isnan(qrs_dur_avl):
+            cornell_product = cornell * qrs_dur_avl * 1000.0
+        features.add("Cornell_Voltage_Duration_Product", cornell_product, "mV*ms")
+
+        # QRS Voltage Dispersion across leads
+        qrs_amps = []
+        for l_name in requested_leads:
+            res_lead = lead_results.get(l_name, {})
+            if res_lead:
+                r_a = res_lead.get("R_Amplitude", np.nan)
+                s_a = res_lead.get("S_Amplitude", np.nan)
+                if not np.isnan(r_a) and not np.isnan(s_a):
+                    qrs_amps.append(r_a + abs(s_a))
+        qrs_disp = np.std(qrs_amps) if len(qrs_amps) > 1 else np.nan
+        features.add("QRS_Voltage_Dispersion", qrs_disp, "mV")
 
         return features

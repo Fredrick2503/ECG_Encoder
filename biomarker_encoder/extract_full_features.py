@@ -21,41 +21,11 @@ logger = logging.getLogger("FullFeatureExtraction")
 def extract_features_for_record(record_id, loader, extractor):
     try:
         record = loader.load_record(record_id)
-        all_features = {"ecg_id": record_id}
-        
-        # HRV features are global and can be extracted from Lead II (index 1)
-        lead_ii_signal = record.signal[1, :]
-        lead_ii_features, _ = extractor._extract_single_lead(lead_ii_signal)
-        
-        hrv_keys = [
-            "RR_Mean", "RR_Median", "RR_Min", "RR_Max", "RR_Range", "RR_STD", "RR_Variance", "RR_CV", "RR_IQR",
-            "RR_Skewness", "RR_Kurtosis", "Mean_HR", "HR_STD", "Min_HR", "Max_HR", "SDNN", "RMSSD", "SDSD", "pNN50",
-            "LF_Power", "HF_Power", "LF_HF_Ratio", "SD1", "SD2", "SD1_SD2_Ratio", "Sample_Entropy"
-        ]
-        
-        for k in hrv_keys:
-            if k in lead_ii_features:
-                all_features[k] = lead_ii_features[k]
-                
-        # Lead names mapping (standard 12-lead ECG)
-        leads = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
-        
-        morphology_keys = [
-            "PR_Interval", "QRS_Duration", "QT_Interval", "QTc_Bazett", "QTc_Fridericia", "ST_Duration",
-            "P_Amplitude", "R_Amplitude", "S_Amplitude", "T_Amplitude", "R_S_Ratio", "QRS_Area", "QRS_Energy",
-            "T_wave_Area", "ST_Slope", "QT_Variability", "QT_Dispersion", "Tp_e_Interval", "Tp_e_QT_Ratio",
-            "RR_QT_Correlation", "RR_QT_Covariance"
-        ]
-        
-        # Loop through all 12 leads and extract morphology features
-        for idx, lead_name in enumerate(leads):
-            lead_signal = record.signal[idx, :]
-            lead_features, _ = extractor._extract_single_lead(lead_signal)
-            for k in morphology_keys:
-                if k in lead_features:
-                    all_features[f"{lead_name}_{k}"] = lead_features[k]
-                    
-        return all_features
+        # Transpose signal to (5000, 12) shape expected by ECGFeatureExtractor
+        features = extractor.extract(record.signal.T, leads="all")
+        features_dict = features.to_dict()
+        features_dict["ecg_id"] = record_id
+        return features_dict
     except Exception as e:
         return {"ecg_id": record_id, "error": str(e)}
 
