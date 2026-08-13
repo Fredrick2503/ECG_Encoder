@@ -1,0 +1,7 @@
+neurokit2
+tqdm
+pandas
+numpy
+scipy
+wfdb
+matplotlib
