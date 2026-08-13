@@ -8,7 +8,6 @@ import scipy.signal
 import neurokit2 as nk
 from pathlib import Path
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -29,7 +28,7 @@ FILTER_LOWCUT = 0.5
 FILTER_HIGHCUT = 40.0
 OUTPUT_DIR = project_root / "biomarkers"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-CSV_OUTPUT_PATH = project_root / "data" / "processed" / "biomarker_features.csv"
+CSV_OUTPUT_PATH = OUTPUT_DIR / "ecg_biomarkers_4500.csv"
 REPORT_OUTPUT_PATH = OUTPUT_DIR / "extraction_report.txt"
 
 # 12 Standard Lead mapping for PTB-XL
@@ -112,46 +111,87 @@ def extract_record_features(record, fs=SAMPLING_RATE):
     if len(ii_r_peaks) < 3:
         return None, ["ECG unusable: less than 3 R-peaks detected in Lead II."]
 
-    # 3. Delineate Lead II waves (method="dwt" as preferred)
-    try:
-        _, ii_waves = nk.ecg_delineate(ii_clean, ii_r_peaks, sampling_rate=fs, method="dwt")
-    except Exception as e:
-        ii_waves = {}
-        qc_failures.append(f"Lead II delineation error: {str(e)}")
+    # 3. Delineate subset of leads (II, V5, V1, I) using DWT
+    delineations = {}
+    for lead in ["II", "V5", "V1", "I"]:
+        lead_sig = clean_signals[:, LEADS_MAP[lead]]
+        try:
+            _, waves = nk.ecg_delineate(lead_sig, ii_r_peaks, sampling_rate=fs, method="dwt")
+            delineations[lead] = waves
+        except Exception as e:
+            delineations[lead] = {}
+            qc_failures.append(f"{lead}_delineation_error: {str(e)}")
 
-    # 4. Reliable T-wave termination lead selection
-    # Prefer Lead II, fallback to V5 if Lead II T-offsets are sparse
-    reliable_t_lead = "II"
-    t_lead_waves = ii_waves
+    # 4. Reliable P-wave lead selection (II -> V1 -> I)
+    p_lead = "II"
+    p_waves = delineations.get("II", {})
+    p_onsets_ii = p_waves.get("ECG_P_Onsets", [])
+    if hasattr(p_onsets_ii, "tolist"):
+        p_onsets_ii = p_onsets_ii.tolist()
+    valid_p_ii = [p for p in p_onsets_ii if not pd.isna(p)]
     
-    t_offsets_ii = ii_waves.get("ECG_T_Offsets", [])
+    if len(valid_p_ii) < 0.6 * len(ii_r_peaks):
+        p_waves_v1 = delineations.get("V1", {})
+        p_onsets_v1 = p_waves_v1.get("ECG_P_Onsets", [])
+        if hasattr(p_onsets_v1, "tolist"):
+            p_onsets_v1 = p_onsets_v1.tolist()
+        valid_p_v1 = [p for p in p_onsets_v1 if not pd.isna(p)]
+        if len(valid_p_v1) > len(valid_p_ii):
+            p_lead = "V1"
+            p_waves = p_waves_v1
+            
+    p_onsets_curr = p_waves.get("ECG_P_Onsets", [])
+    if hasattr(p_onsets_curr, "tolist"):
+        p_onsets_curr = p_onsets_curr.tolist()
+    valid_p_curr = [p for p in p_onsets_curr if not pd.isna(p)]
+    if len(valid_p_curr) < 0.6 * len(ii_r_peaks):
+        p_waves_i = delineations.get("I", {})
+        p_onsets_i = p_waves_i.get("ECG_P_Onsets", [])
+        if hasattr(p_onsets_i, "tolist"):
+            p_onsets_i = p_onsets_i.tolist()
+        valid_p_i = [p for p in p_onsets_i if not pd.isna(p)]
+        if len(valid_p_i) > len(valid_p_curr):
+            p_lead = "I"
+            p_waves = p_waves_i
+
+    # 5. Reliable T-wave lead selection (II -> V5 -> I)
+    t_lead = "II"
+    t_waves = delineations.get("II", {})
+    t_offsets_ii = t_waves.get("ECG_T_Offsets", [])
     if hasattr(t_offsets_ii, "tolist"):
         t_offsets_ii = t_offsets_ii.tolist()
-    valid_ii = [t for t in t_offsets_ii if not pd.isna(t)]
+    valid_t_ii = [t for t in t_offsets_ii if not pd.isna(t)]
     
-    if len(valid_ii) < 0.6 * len(ii_r_peaks):
-        # Fallback to V5 delineation
-        v5_clean = clean_signals[:, LEADS_MAP["V5"]]
-        try:
-            _, v5_waves = nk.ecg_delineate(v5_clean, ii_r_peaks, sampling_rate=fs, method="dwt")
-            t_offsets_v5 = v5_waves.get("ECG_T_Offsets", [])
-            if hasattr(t_offsets_v5, "tolist"):
-                t_offsets_v5 = t_offsets_v5.tolist()
-            valid_v5 = [t for t in t_offsets_v5 if not pd.isna(t)]
-            if len(valid_v5) > len(valid_ii):
-                reliable_t_lead = "V5"
-                t_lead_waves = v5_waves
-        except Exception:
-            pass
+    if len(valid_t_ii) < 0.6 * len(ii_r_peaks):
+        t_waves_v5 = delineations.get("V5", {})
+        t_offsets_v5 = t_waves_v5.get("ECG_T_Offsets", [])
+        if hasattr(t_offsets_v5, "tolist"):
+            t_offsets_v5 = t_offsets_v5.tolist()
+        valid_t_v5 = [t for t in t_offsets_v5 if not pd.isna(t)]
+        if len(valid_t_v5) > len(valid_t_ii):
+            t_lead = "V5"
+            t_waves = t_waves_v5
+            
+    t_offsets_curr = t_waves.get("ECG_T_Offsets", [])
+    if hasattr(t_offsets_curr, "tolist"):
+        t_offsets_curr = t_offsets_curr.tolist()
+    valid_t_curr = [t for t in t_offsets_curr if not pd.isna(t)]
+    if len(valid_t_curr) < 0.6 * len(ii_r_peaks):
+        t_waves_i = delineations.get("I", {})
+        t_offsets_i = t_waves_i.get("ECG_T_Offsets", [])
+        if hasattr(t_offsets_i, "tolist"):
+            t_offsets_i = t_offsets_i.tolist()
+        valid_t_i = [t for t in t_offsets_i if not pd.isna(t)]
+        if len(valid_t_i) > len(valid_t_curr):
+            t_lead = "I"
+            t_waves = t_waves_i
 
-    # 5. Baseline estimation per lead using waves where available
+    # 6. Baseline estimation per lead
     lead_baselines = {}
     for lead_name in LEADS_MAP.keys():
         clean_sig = clean_signals[:, LEADS_MAP[lead_name]]
-        if lead_name == "II":
-            lead_baselines[lead_name] = get_isoelectric_baseline(clean_sig, ii_r_peaks, ii_waves, fs)
-        elif lead_name == "V5" and reliable_t_lead == "V5":
-            lead_baselines[lead_name] = get_isoelectric_baseline(clean_sig, ii_r_peaks, t_lead_waves, fs)
+        if lead_name in delineations:
+            lead_baselines[lead_name] = get_isoelectric_baseline(clean_sig, ii_r_peaks, delineations[lead_name], fs)
         else:
             lead_baselines[lead_name] = get_isoelectric_baseline(clean_sig, ii_r_peaks, {}, fs)
 
@@ -208,9 +248,9 @@ def extract_record_features(record, fs=SAMPLING_RATE):
     feats["mean_rr"] = float(np.mean(rr_ms)) if len(rr_ms) > 0 else np.nan
     feats["sd_rr"] = float(np.std(rr_ms)) if len(rr_ms) > 0 else np.nan
     
-    feats["p_amplitude"] = get_avg_amp("II", ii_waves.get("ECG_P_Peaks", []))
-    feats["p_duration"] = get_avg_duration(ii_waves.get("ECG_P_Onsets", []), ii_waves.get("ECG_P_Offsets", []))
-    feats["pr_interval"] = get_avg_duration(ii_waves.get("ECG_P_Onsets", []), ii_waves.get("ECG_R_Onsets", []))
+    feats["p_amplitude"] = get_avg_amp(p_lead, p_waves.get("ECG_P_Peaks", []))
+    feats["p_duration"] = get_avg_duration(p_waves.get("ECG_P_Onsets", []), p_waves.get("ECG_P_Offsets", []))
+    feats["pr_interval"] = get_avg_duration(p_waves.get("ECG_P_Onsets", []), p_waves.get("ECG_R_Onsets", []))
 
     # =========================================================================
     # 2. Lead V1 Features
@@ -220,7 +260,6 @@ def extract_record_features(record, fs=SAMPLING_RATE):
     
     feats["v1_r_amplitude"] = get_avg_amp("V1", ii_r_peaks)
     
-    # S-wave amplitude: minimum value within QRS complex window (R-peak to R-peak + 80ms)
     s_amps = []
     for r_peak in ii_r_peaks:
         start = int(r_peak)
@@ -239,10 +278,8 @@ def extract_record_features(record, fs=SAMPLING_RATE):
     # =========================================================================
     v_leads = ["V1", "V2", "V3", "V4", "V5", "V6"]
     v_r_amps = [get_avg_amp(l, ii_r_peaks) for l in v_leads]
-    
     feats["max_r_v1_v6"] = float(np.nanmax(v_r_amps)) if not np.all(np.isnan(v_r_amps)) else np.nan
     
-    # Progression slope across V1-V6
     valid_r = [(idx, val) for idx, val in enumerate(v_r_amps) if not np.isnan(val)]
     if len(valid_r) >= 2:
         x_vals = [item[0] for item in valid_r]
@@ -256,7 +293,7 @@ def extract_record_features(record, fs=SAMPLING_RATE):
     # 5. All 12 Leads Metrics (ST and T-wave properties)
     # =========================================================================
     # Find average QRS offset relative to R-peak from Lead II
-    ii_qrs_offsets = ii_waves.get("ECG_R_Offsets", [])
+    ii_qrs_offsets = delineations.get("II", {}).get("ECG_R_Offsets", [])
     relative_j_offsets = []
     if hasattr(ii_qrs_offsets, "tolist"):
         ii_qrs_offsets = ii_qrs_offsets.tolist()
@@ -275,7 +312,6 @@ def extract_record_features(record, fs=SAMPLING_RATE):
         clean_sig = clean_signals[:, col_idx]
         base = lead_baselines[lead_name]
         
-        # Calculate average ST deviation (measured 60-80 ms after J-point)
         st_vals = []
         for r_peak in ii_r_peaks:
             j_point = int(r_peak + avg_j_offset)
@@ -290,10 +326,9 @@ def extract_record_features(record, fs=SAMPLING_RATE):
                 st_elevations.append(lead_st_mean)
             else:
                 st_depressions.append(abs(lead_st_mean))
-            if abs(lead_st_mean) >= 0.1:  # Significant ST deviation >= 0.1 mV (1 mm)
+            if abs(lead_st_mean) >= 0.1:
                 num_significant_st += 1
                 
-        # T-wave amplitude: local absolute peak in [100ms, 400ms] post R-peak
         lead_t_vals = []
         for r_peak in ii_r_peaks:
             start = int(r_peak + 0.10 * fs)
@@ -306,7 +341,7 @@ def extract_record_features(record, fs=SAMPLING_RATE):
         lead_t_mean = np.mean(lead_t_vals) if len(lead_t_vals) > 0 else np.nan
         if not np.isnan(lead_t_mean):
             t_amplitudes.append(abs(lead_t_mean))
-            if lead_t_mean < 0.0:  # T-wave inversion
+            if lead_t_mean < 0.0:
                 num_t_inversions += 1
                 
     feats["max_st_elevation"] = float(np.max(st_elevations)) if len(st_elevations) > 0 else 0.0
@@ -319,12 +354,42 @@ def extract_record_features(record, fs=SAMPLING_RATE):
     # =========================================================================
     # 6. Global / 12-lead ECG (QRS, QT, QTc)
     # =========================================================================
-    # QRS duration
-    feats["qrs_duration"] = get_avg_duration(ii_waves.get("ECG_R_Onsets", []), ii_waves.get("ECG_R_Offsets", []))
+    # Global QRS boundaries across II, V5, V1, I
+    lead_onsets = []
+    lead_offsets = []
+    for lead in ["II", "V5", "V1", "I"]:
+        w = delineations.get(lead, {})
+        ons = w.get("ECG_R_Onsets", [])
+        offs = w.get("ECG_R_Offsets", [])
+        if hasattr(ons, "tolist"):
+            ons = ons.tolist()
+        if hasattr(offs, "tolist"):
+            offs = offs.tolist()
+        lead_onsets.append(ons)
+        lead_offsets.append(offs)
+        
+    qrs_durs = []
+    for beat_idx in range(len(ii_r_peaks)):
+        beat_onsets = []
+        beat_offsets = []
+        for l_idx in range(4):
+            ons_list = lead_onsets[l_idx]
+            offs_list = lead_offsets[l_idx]
+            if beat_idx < len(ons_list) and not pd.isna(ons_list[beat_idx]):
+                beat_onsets.append(ons_list[beat_idx])
+            if beat_idx < len(offs_list) and not pd.isna(offs_list[beat_idx]):
+                beat_offsets.append(offs_list[beat_idx])
+        if beat_onsets and beat_offsets:
+            global_onset = np.median(beat_onsets)
+            global_offset = np.median(beat_offsets)
+            if global_offset > global_onset:
+                qrs_durs.append(global_offset - global_onset)
+                
+    feats["qrs_duration"] = samples_to_ms(np.mean(qrs_durs)) if len(qrs_durs) > 0 else np.nan
     
-    # QT interval (from reliable T offset)
-    qrs_onsets = t_lead_waves.get("ECG_R_Onsets", [])
-    t_offsets = t_lead_waves.get("ECG_T_Offsets", [])
+    # QT interval (from global QRS onset to reliable T offset)
+    qrs_onsets = t_waves.get("ECG_R_Onsets", [])
+    t_offsets = t_waves.get("ECG_T_Offsets", [])
     if hasattr(qrs_onsets, "tolist"):
         qrs_onsets = qrs_onsets.tolist()
     if hasattr(t_offsets, "tolist"):
@@ -350,7 +415,6 @@ def extract_record_features(record, fs=SAMPLING_RATE):
     lead_aVF_qrs = get_avg_amp("aVF", ii_r_peaks)
     feats["qrs_axis"] = calculate_axis(lead_I_qrs, lead_aVF_qrs)
     
-    # T-wave axis
     t_lead_I_vals = []
     t_lead_aVF_vals = []
     for r_peak in ii_r_peaks:
@@ -379,21 +443,38 @@ def extract_record_features(record, fs=SAMPLING_RATE):
     # Quality Control and Sanity Checks
     # =========================================================================
     qc_flags = []
-    if not np.isnan(feats["heart_rate"]) and (feats["heart_rate"] < 30 or feats["heart_rate"] > 220):
-        qc_flags.append("implausible_heart_rate")
-        feats["heart_rate"] = np.nan
-        
-    if not np.isnan(feats["qrs_duration"]) and (feats["qrs_duration"] < 40 or feats["qrs_duration"] > 200):
-        qc_flags.append("implausible_qrs_duration")
-        feats["qrs_duration"] = np.nan
-        
-    if not np.isnan(feats["pr_interval"]) and (feats["pr_interval"] < 80 or feats["pr_interval"] > 300):
-        qc_flags.append("implausible_pr_interval")
-        feats["pr_interval"] = np.nan
-        
-    if not np.isnan(feats["qtc_interval"]) and (feats["qtc_interval"] < 200 or feats["qtc_interval"] > 800):
-        qc_flags.append("implausible_qtc_interval")
-        feats["qtc_interval"] = np.nan
+    
+    # Check Heart Rate
+    if not np.isnan(feats["heart_rate"]):
+        if feats["heart_rate"] <= 0 or feats["heart_rate"] > 350:
+            qc_flags.append("failed_heart_rate")
+            feats["heart_rate"] = np.nan
+        elif feats["heart_rate"] < 40 or feats["heart_rate"] > 180:
+            qc_flags.append("abnormal_heart_rate")
+            
+    # Check QRS Duration
+    if not np.isnan(feats["qrs_duration"]):
+        if feats["qrs_duration"] < 30 or feats["qrs_duration"] > 350:
+            qc_flags.append("failed_qrs_duration")
+            feats["qrs_duration"] = np.nan
+        elif feats["qrs_duration"] < 60 or feats["qrs_duration"] > 140:
+            qc_flags.append("abnormal_qrs_duration")
+            
+    # Check PR Interval
+    if not np.isnan(feats["pr_interval"]):
+        if feats["pr_interval"] < 50 or feats["pr_interval"] > 400:
+            qc_flags.append("failed_pr_interval")
+            feats["pr_interval"] = np.nan
+        elif feats["pr_interval"] < 100 or feats["pr_interval"] > 240:
+            qc_flags.append("abnormal_pr_interval")
+            
+    # Check QTc Interval
+    if not np.isnan(feats["qtc_interval"]):
+        if feats["qtc_interval"] < 150 or feats["qtc_interval"] > 900:
+            qc_flags.append("failed_qtc_interval")
+            feats["qtc_interval"] = np.nan
+        elif feats["qtc_interval"] < 350 or feats["qtc_interval"] > 500:
+            qc_flags.append("abnormal_qtc_interval")
 
     return feats, qc_failures + qc_flags
 
@@ -473,7 +554,7 @@ def main():
         f.write(f"Number of records processed: {len(record_ids)}\n")
         f.write(f"Number of successful extractions: {success_count}\n")
         f.write(f"Number of failed extractions: {fail_count}\n")
-        f.write(f"Number of records flagged for poor quality/physiological sanity: {qc_flag_count}\n\n")
+        f.write(f"Number of records flagged for quality/warnings/sanity: {qc_flag_count}\n\n")
         f.write("Missing Value Percentage per Feature:\n")
         f.write("------------------------------------\n")
         for col, val in missing_pct.items():

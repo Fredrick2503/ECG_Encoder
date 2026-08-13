@@ -4,17 +4,17 @@ ECG BIOMARKER EXTRACTION SUMMARY REPORT
 Number of records processed: 4500
 Number of successful extractions: 4498
 Number of failed extractions: 2
-Number of records flagged for poor quality/physiological sanity: 2323
+Number of records flagged for quality/warnings/sanity: 4043
 
 Missing Value Percentage per Feature:
 ------------------------------------
 record_id: 0.00%
-heart_rate: 0.02%
+heart_rate: 0.00%
 mean_rr: 0.00%
 sd_rr: 0.00%
-p_amplitude: 0.18%
-p_duration: 0.18%
-pr_interval: 31.61%
+p_amplitude: 0.07%
+p_duration: 0.07%
+pr_interval: 1.69%
 v1_r_amplitude: 0.00%
 v1_s_amplitude: 0.00%
 v5_r_amplitude: 0.00%
@@ -26,9 +26,9 @@ num_leads_st_deviation: 0.00%
 max_t_amplitude: 0.00%
 mean_t_amplitude: 0.00%
 num_leads_t_inversion: 0.00%
-qrs_duration: 33.68%
-qt_interval: 0.98%
-qtc_interval: 1.16%
+qrs_duration: 0.11%
+qt_interval: 0.60%
+qtc_interval: 0.60%
 qrs_axis: 0.00%
 t_wave_axis: 0.00%
 qrs_t_angle: 0.00%
