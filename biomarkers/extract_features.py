@@ -478,13 +478,58 @@ def extract_record_features(record, fs=SAMPLING_RATE):
 
     return feats, qc_failures + qc_flags
 
+def process_single_record(args_tuple):
+    rid, file_path_str, diagnostic_classes, sampling_rate = args_tuple
+    try:
+        import numpy as np
+        import wfdb
+        
+        # Read signal from physical file using wfdb
+        signal, meta = wfdb.rdsamp(file_path_str)
+        # Raw signal returned by wfdb is (signal_length, num_leads).
+        # We standardise it to (num_leads, signal_length) for models.
+        signal = signal.T.astype(np.float32)
+        
+        # Create a mock record object that matches what extract_record_features expects
+        class MockRecord:
+            def __init__(self, record_id, sig, diag_classes):
+                self.record_id = record_id
+                self.signal = sig
+                self.metadata = {"diagnostic_classes": diag_classes}
+                
+        record = MockRecord(rid, signal, diagnostic_classes)
+        feats, qc_issues = extract_record_features(record, sampling_rate)
+        
+        if feats is None:
+            return rid, None, qc_issues, "failed", "; ".join(qc_issues)
+            
+        classes = ["NORM", "MI", "STTC", "CD", "HYP"]
+        for c in classes:
+            feats[c] = 1 if c in diagnostic_classes else 0
+            
+        status = "warning" if len(qc_issues) > 0 else "success"
+        return rid, feats, qc_issues, status, "; ".join(qc_issues)
+        
+    except Exception as e:
+        return rid, None, [], "failed", str(e)
+
 def main():
+    import time
+    from collections import Counter
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    
     parser = argparse.ArgumentParser(description="Extract custom ECG biomarkers.")
-    parser.add_argument("--limit", type=int, default=ROW_LIMIT, help="Number of records to process")
+    parser.add_argument("--limit", type=int, default=ROW_LIMIT, help="Number of records to process. Set to -1 to process all.")
+    parser.add_argument("--output_csv", type=str, default=str(CSV_OUTPUT_PATH), help="Output path for feature CSV")
+    parser.add_argument("--log_csv", type=str, default=str(OUTPUT_DIR / "qc_logs.csv"), help="Output path for QC logs CSV")
+    parser.add_argument("--report_md", type=str, default=str(REPORT_OUTPUT_PATH), help="Output path for report file")
     args = parser.parse_args()
     
-    logger.info(f"Initializing dataset loader to process {args.limit} records...")
+    output_csv = Path(args.output_csv)
+    log_csv = Path(args.log_csv)
+    report_md = Path(args.report_md)
     
+    logger.info("Initializing dataset loader...")
     loader = PTBXLLoader(
         root_dir=PTBXL_CONFIG["raw_dir"],
         database_csv=PTBXL_CONFIG["database_csv"],
@@ -493,9 +538,12 @@ def main():
     )
     
     metadata = loader.load_metadata()
-    record_ids = metadata.index[:args.limit]
-    
-    logger.info(f"Extracting features for {len(record_ids)} records...")
+    if args.limit > 0:
+        record_ids = metadata.index[:args.limit]
+    else:
+        record_ids = metadata.index
+        
+    logger.info(f"Extracting features for {len(record_ids)} records in parallel...")
     
     extracted_features = []
     qc_logs = []
@@ -504,63 +552,179 @@ def main():
     fail_count = 0
     qc_flag_count = 0
     
-    for rid in tqdm(record_ids, desc="Extracting features"):
-        try:
-            record = loader.load_record(rid)
-            feats, qc_issues = extract_record_features(record, SAMPLING_RATE)
+    start_time = time.time()
+    
+    # Pre-map record info to avoid loader recreation in workers
+    logger.info("Pre-mapping record files and diagnostic classes...")
+    tasks_args = []
+    for rid in record_ids:
+        row = metadata.loc[rid]
+        if loader.resolution == "hr":
+            file_path = loader.root_dir / row["filename_hr"]
+        else:
+            file_path = loader.root_dir / row["filename_lr"]
             
-            if feats is None:
+        scp_codes = row.get("scp_codes", {})
+        diagnostic_classes = loader.parser.get_diagnostic_classes(scp_codes)
+        tasks_args.append((rid, str(file_path), list(diagnostic_classes), SAMPLING_RATE))
+        
+    num_workers = max(1, (os.cpu_count() or 2) - 1)
+    logger.info(f"Using {num_workers} processes for parallel feature extraction...")
+    
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        futures = {executor.submit(process_single_record, arg): arg[0] for arg in tasks_args}
+        
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Extracting features"):
+            rid = futures[future]
+            try:
+                rid, feats, qc_issues, status, issues_str = future.result()
+                if status == "failed":
+                    fail_count += 1
+                    qc_logs.append({"record_id": rid, "status": "failed", "issues": issues_str})
+                else:
+                    extracted_features.append(feats)
+                    success_count += 1
+                    if status == "warning":
+                        qc_flag_count += 1
+                        qc_logs.append({"record_id": rid, "status": "warning", "issues": issues_str})
+                    else:
+                        qc_logs.append({"record_id": rid, "status": "success", "issues": ""})
+            except Exception as e:
                 fail_count += 1
-                qc_logs.append({"record_id": rid, "status": "failed", "issues": "; ".join(qc_issues)})
-                continue
-                
-            # Parse targets
-            classes = ["NORM", "MI", "STTC", "CD", "HYP"]
-            label_str = str(record.metadata.get("diagnostic_classes", []))
-            for c in classes:
-                feats[c] = 1 if c in label_str else 0
-                
-            extracted_features.append(feats)
-            success_count += 1
-            
-            if len(qc_issues) > 0:
-                qc_flag_count += 1
-                qc_logs.append({"record_id": rid, "status": "warning", "issues": "; ".join(qc_issues)})
-            else:
-                qc_logs.append({"record_id": rid, "status": "success", "issues": ""})
-                
-        except Exception as e:
-            fail_count += 1
-            qc_logs.append({"record_id": rid, "status": "failed", "issues": str(e)})
+                qc_logs.append({"record_id": rid, "status": "failed", "issues": str(e)})
 
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    avg_speed = success_count / elapsed_time if elapsed_time > 0 else 0
+    
     # Create DataFrames
     df_features = pd.DataFrame(extracted_features)
     df_qc = pd.DataFrame(qc_logs)
     
     # Save CSVs
-    os.makedirs(CSV_OUTPUT_PATH.parent, exist_ok=True)
-    df_features.to_csv(CSV_OUTPUT_PATH, index=False)
-    logger.info(f"Features saved to {CSV_OUTPUT_PATH}. Shape: {df_features.shape}")
+    os.makedirs(output_csv.parent, exist_ok=True)
+    df_features.to_csv(output_csv, index=False)
+    logger.info(f"Features saved to {output_csv}. Shape: {df_features.shape}")
     
-    df_qc.to_csv(OUTPUT_DIR / "qc_logs.csv", index=False)
+    os.makedirs(log_csv.parent, exist_ok=True)
+    df_qc.to_csv(log_csv, index=False)
+    logger.info(f"QC/Extraction logs saved to {log_csv}")
     
-    # Missing percentages
-    missing_pct = df_features.isna().mean() * 100.0
+    # Calculate statistics
+    total_found = len(record_ids)
+    success_pct = (success_count / total_found) * 100.0 if total_found > 0 else 0
+    fail_pct = (fail_count / total_found) * 100.0 if total_found > 0 else 0
     
-    # Write report
-    with open(REPORT_OUTPUT_PATH, "w") as f:
-        f.write("ECG BIOMARKER EXTRACTION SUMMARY REPORT\n")
-        f.write("======================================\n\n")
-        f.write(f"Number of records processed: {len(record_ids)}\n")
-        f.write(f"Number of successful extractions: {success_count}\n")
-        f.write(f"Number of failed extractions: {fail_count}\n")
-        f.write(f"Number of records flagged for quality/warnings/sanity: {qc_flag_count}\n\n")
-        f.write("Missing Value Percentage per Feature:\n")
-        f.write("------------------------------------\n")
-        for col, val in missing_pct.items():
-            f.write(f"{col}: {val:.2f}%\n")
+    # Features (excluding metadata/labels)
+    biomarkers = [
+        "heart_rate", "mean_rr", "sd_rr", "p_amplitude", "p_duration", "pr_interval",
+        "v1_r_amplitude", "v1_s_amplitude", "v5_r_amplitude", "max_r_v1_v6",
+        "r_progression_slope", "max_st_elevation", "max_st_depression", "num_leads_st_deviation",
+        "max_t_amplitude", "mean_t_amplitude", "num_leads_t_inversion", "qrs_duration",
+        "qt_interval", "qtc_interval", "qrs_axis", "t_wave_axis", "qrs_t_angle", "sokolow_lyon"
+    ]
+    
+    missing_pct = {}
+    min_vals = {}
+    max_vals = {}
+    
+    for b in biomarkers:
+        if b in df_features.columns:
+            missing_pct[b] = df_features[b].isna().mean() * 100.0
+            min_vals[b] = df_features[b].min()
+            max_vals[b] = df_features[b].max()
+        else:
+            missing_pct[b] = 100.0
+            min_vals[b] = np.nan
+            max_vals[b] = np.nan
             
-    logger.info(f"Report saved to {REPORT_OUTPUT_PATH}")
+    # Class-label counts
+    classes = ["NORM", "MI", "STTC", "CD", "HYP"]
+    class_counts = {}
+    for c in classes:
+        if c in df_features.columns:
+            class_counts[c] = int(df_features[c].sum())
+        else:
+            class_counts[c] = 0
+            
+    # Warnings distribution
+    warning_list = []
+    for issue in df_qc[df_qc["status"] == "warning"]["issues"]:
+        warning_list.extend([w.strip() for w in issue.split(";") if w.strip()])
+    warning_counter = Counter(warning_list)
+    common_warnings = warning_counter.most_common(10)
+    
+    # Suspicious values check
+    suspicious_notes = []
+    if "heart_rate" in df_features.columns:
+        hr_extreme = df_features[(df_features["heart_rate"] > 200) | (df_features["heart_rate"] < 30)]["heart_rate"]
+        if not hr_extreme.empty:
+            suspicious_notes.append(f"heart_rate: {len(hr_extreme)} records have values < 30 or > 200 (Min: {hr_extreme.min():.1f}, Max: {hr_extreme.max():.1f})")
+    if "qtc_interval" in df_features.columns:
+        qtc_extreme = df_features[(df_features["qtc_interval"] > 600) | (df_features["qtc_interval"] < 250)]["qtc_interval"]
+        if not qtc_extreme.empty:
+            suspicious_notes.append(f"qtc_interval: {len(qtc_extreme)} records have values < 250ms or > 600ms (Min: {qtc_extreme.min():.1f}, Max: {qtc_extreme.max():.1f})")
+    if "qrs_duration" in df_features.columns:
+        qrs_extreme = df_features[(df_features["qrs_duration"] > 200) | (df_features["qrs_duration"] < 50)]["qrs_duration"]
+        if not qrs_extreme.empty:
+            suspicious_notes.append(f"qrs_duration: {len(qrs_extreme)} records have values < 50ms or > 200ms (Min: {qrs_extreme.min():.1f}, Max: {qrs_extreme.max():.1f})")
+            
+    # Final verdict
+    overall_missing = df_features[biomarkers].isna().mean().mean() * 100.0
+    if success_pct > 90.0 and overall_missing < 15.0:
+        verdict = "SUITABLE: The extraction success rate is high and overall missing feature rate is low. Missing values can be safely handled using standard imputation methods."
+    else:
+        verdict = "NEEDS CAUTION: There are significant failed extractions or a high rate of missing values across key biomarkers."
+        
+    # Write report
+    os.makedirs(report_md.parent, exist_ok=True)
+    with open(report_md, "w") as f:
+        f.write("# ECG Biomarker Extraction Summary Report\n\n")
+        f.write("## Execution Summary\n")
+        f.write(f"- **Total ECG Records Found**: {total_found}\n")
+        f.write(f"- **Successfully Extracted Records**: {success_count} ({success_pct:.2f}%)\n")
+        f.write(f"- **Failed Records**: {fail_count} ({fail_pct:.2f}%)\n")
+        f.write(f"- **Records with Quality/Validation Warnings**: {qc_flag_count}\n")
+        f.write(f"- **Total Execution Time**: {elapsed_time:.2f} seconds\n")
+        f.write(f"- **Average Speed**: {avg_speed:.2f} records/second\n\n")
+        
+        f.write("## Final Suitability Verdict\n")
+        f.write(f"> [!NOTE]\n> {verdict}\n\n")
+        
+        f.write("## Class-Label Counts\n")
+        f.write("| Diagnostic Class | Count |\n")
+        f.write("| --- | --- |\n")
+        for c in classes:
+            f.write(f"| {c} | {class_counts[c]} |\n")
+        f.write("\n")
+        
+        f.write("## Most Common Quality/Validation Warnings\n")
+        if common_warnings:
+            f.write("| Warning Type | Count |\n")
+            f.write("| --- | --- |\n")
+            for w, count in common_warnings:
+                f.write(f"| {w} | {count} |\n")
+        else:
+            f.write("No warnings recorded.\n")
+        f.write("\n")
+        
+        f.write("## Suspicious or Extreme Values\n")
+        if suspicious_notes:
+            for note in suspicious_notes:
+                f.write(f"- {note}\n")
+        else:
+            f.write("No clearly suspicious or extreme values identified in basic range checks.\n")
+        f.write("\n")
+        
+        f.write("## Biomarker Statistical Summary\n")
+        f.write("| Biomarker Feature | Min Value | Max Value | Missing % |\n")
+        f.write("| --- | --- | --- | --- |\n")
+        for b in biomarkers:
+            min_val = f"{min_vals[b]:.4f}" if not pd.isna(min_vals[b]) else "NaN"
+            max_val = f"{max_vals[b]:.4f}" if not pd.isna(max_vals[b]) else "NaN"
+            f.write(f"| {b} | {min_val} | {max_val} | {missing_pct[b]:.2f}% |\n")
+            
+    logger.info(f"Report saved to {report_md}")
 
 if __name__ == "__main__":
     main()
