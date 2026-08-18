@@ -18,7 +18,8 @@ Current implementation order:
 2. Signal Preprocessing (DONE)
 3. Representation Generation (TODO)
 4. Temporal Encoder (DONE)
-5. Morphology Encoder (TODO)
+5. Biomarker Encoder (DONE)
+6. Morphology Encoder (TODO)
 
 **Overall Progress:**
 
@@ -30,9 +31,7 @@ Implementation: **20%**
 
 ## Current Work
 
-Completed the Data Management layer, the complete Signal Preprocessing pipeline, and the Temporal Encoder module. Designed, implemented, and executed comparative experiments benchmark training for the three self-supervised pretraining strategies (Reconstruction, Masked Autoencoder (MAE), and Contrastive Learning SimCLR) on PTB-XL. Updated Chapter 3 & Chapter 4 of the Thesis Notes with benchmark evaluation tables and analysis of factors affecting accuracy.
-
-Next starting the Representation Generation module.
+Completed the Data Management layer, the complete Signal Preprocessing pipeline, the Temporal Encoder module, and the Biomarker Encoder representation learning subsystem (with three architectures: Attention MLP, Beta-VAE, FT-Transformer). Designed, executed, and completed Optuna hyperparameter searches and benchmark comparisons on the full PTB-XL dataset (21,837 records). Saved checkpoint weights, features, and model metrics. Updated project memory state.
 
 ---
 
@@ -52,7 +51,6 @@ Implement the Representation Generation module (feature maps and baseline embedd
 
 The following architecture remains planned only:
 
-* Biomarker Encoder
 * Fusion Engine
 * Unified Classification
 * Explainability

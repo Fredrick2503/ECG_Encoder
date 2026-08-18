@@ -1,0 +1,40 @@
+ECG BIOMARKER EXTRACTION SUMMARY REPORT
+======================================
+
+Number of records processed: 4500
+Number of successful extractions: 4498
+Number of failed extractions: 2
+Number of records flagged for quality/warnings/sanity: 4043
+
+Missing Value Percentage per Feature:
+------------------------------------
+record_id: 0.00%
+heart_rate: 0.00%
+mean_rr: 0.00%
+sd_rr: 0.00%
+p_amplitude: 0.07%
+p_duration: 0.07%
+pr_interval: 1.69%
+v1_r_amplitude: 0.00%
+v1_s_amplitude: 0.00%
+v5_r_amplitude: 0.00%
+max_r_v1_v6: 0.00%
+r_progression_slope: 0.00%
+max_st_elevation: 0.00%
+max_st_depression: 0.00%
+num_leads_st_deviation: 0.00%
+max_t_amplitude: 0.00%
+mean_t_amplitude: 0.00%
+num_leads_t_inversion: 0.00%
+qrs_duration: 0.11%
+qt_interval: 0.60%
+qtc_interval: 0.60%
+qrs_axis: 0.00%
+t_wave_axis: 0.00%
+qrs_t_angle: 0.00%
+sokolow_lyon: 0.00%
+NORM: 0.00%
+MI: 0.00%
+STTC: 0.00%
+CD: 0.00%
+HYP: 0.00%

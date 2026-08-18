@@ -37,7 +37,7 @@ Build the core software infrastructure from scratch.
 | Signal Preprocessing       | DONE   | 100%     |
 | Temporal Encoder           | DONE   | 100%     |
 | Morphology Encoder         | TODO   | 0%       |
-| Biomarker Encoder          | TODO   | 0%       |
+| Biomarker Encoder          | DONE   | 100%     |
 | Fusion Engine              | TODO   | 0%       |
 | Unified Classification     | TODO   | 0%       |
 | Explainability             | TODO   | 0%       |
@@ -47,7 +47,7 @@ Build the core software infrastructure from scratch.
 | Evaluation & Benchmarking  | TODO   | 0%       |
 | Inference Pipeline         | TODO   | 0%       |
 | Deployment                 | TODO   | 0%       |
-| Documentation / Thesis     | IN_PROGRESS | 20%     |
+| Documentation / Thesis     | IN_PROGRESS | 30%     |
 
 ### Status Legend
 
@@ -85,6 +85,13 @@ Completed:
 * Designed, implemented, and verified `train_optimized.py` featuring dropout regularization, ReduceLROnPlateau learning rate scheduler, weight decay, and early stopping.
 * Launched the final optimized BiLSTM training run on the full PTB-XL dataset (17,418 training records) with MAE pretraining in the background.
 * Cleaned up stalled RUNNING trials in the MLflow database and resumed the expanded parameter tuning sweep (`run_expanded_sweep.py`) starting from Trial 6 in the background.
+* Created a dedicated virtual environment (`.venv`) inheriting system site packages to reuse PyTorch and other heavy packages, avoiding large downloads.
+* Linked the full 1.8GB PTB-XL dataset via Windows directory junctions to the raw directory and validated successfully using `tests/test_real_data.py`.
+* Rebuilt the feature extraction pipeline matching the exact logic of the previous version's `extractor.py` for feature parity.
+* Implemented three autoencoder architectures (Attention MLP, Beta-VAE, and FT-Transformer) to learn compact 32-dim latent representations from 50 biomarkers.
+* Performed hyperparameter sweeps using Optuna and benchmarked the models, identifying FT-Transformer as the recommended model with lowest MSE (0.4017).
+* Exposed the embedding extraction API and built a visualization notebook.
+* Extracted demographic, HRV, and morphology features (51 dimensions) for all 21,837 records in the PTB-XL dataset and trained/tuned the Attention MLP, Beta-VAE, and FT-Transformer autoencoders on the full dataset.
 * Implemented new temporal encoder architectures `ECGTransformer` and `ECGMultiScaleCNN` under `temporal_encoder/encoder_upgrades.py`.
 * Executed a comparative experiment (`run_comparison_experiment.py`) showing the Transformer architecture outperforming the Multi-Scale CNN+BiLSTM baseline by a margin of 13.11% in subset accuracy and 37.76% in Macro F1 on the test set.
 * Designed, implemented, and executed a 10-trial Goal-Oriented Adaptive Search (`goal_search.py`) for the ECG Transformer, utilizing an automated validation feedback loop to optimize layers, regularization, and epochs, achieving a peak validation ROC-AUC of 87.21% and test ROC-AUC of 89.18%.
@@ -92,6 +99,15 @@ Completed:
 * Implemented Squeeze-and-Excitation (SE) channel attention block class (`SqueezeExcitation1D` in `temporal_encoder/encoder_upgrades.py`) and integrated it into the `ECGResNet1D` blocks.
 * Trained an optimized ResNet model with SE attention and Asymmetric Loss, and an optimized Transformer model with Asymmetric Loss on the full PTB-XL dataset.
 * Developed the `ensemble_eval.py` script to ensemble models, grid search for optimal weights, optimize per-class validation thresholds, and evaluate final test performance.
+* Upgraded the Biomarker Encoder pipeline with robust missing-value handling: implements median imputation and binary missingness masks (present/missing) concatenated into a joint 2*N feature representation.
+* Upgraded the Attention MLP, Beta-VAE, and FT-Transformer models with classification heads to jointly perform biomarker reconstruction (latent clustering embeddings) and direct multi-label diagnostic classification.
+* Created an interactive demonstration and verification notebook `notebooks/biomarker_joint_learning_demo.ipynb`.
+* Re-validated and configured the virtual environment (`.venv`) inheriting system site packages. Appended `optuna` to `requirements.txt` and verified package imports.
+* Upgraded the ECG Feature Extractor (`biomarker_extractor.py`) to support 60 clinical biomarkers (e.g. J-point amplitude, ST-segment area, Sokolow-Lyon/Cornell indices, QRS-T angle, and secondary peaks).
+* Executed feature set comparison experiments (`run_feature_comparison.py`) comparing the old (256 dimensions) and new (606 dimensions) biomarker setups, showing lower reconstruction MSE/MAE across Attention MLP, Beta-VAE, and FT-Transformer models.
+* Ran optimized parallel biomarker extraction on the full PTB-XL dataset (21,837 records) in 48 minutes, generating 24 clinical features and quality logs.
+* Trained Attention MLP, Beta-VAE, and FT-Transformer biomarker encoder models on the full dataset with patient-wise splitting, generated 32-dim latent embeddings, and compiled a comprehensive comparative evaluation report.
+* Performed unsupervised clustering validation (K-Means K=5) on the 32-dimensional embeddings, generated PCA and t-SNE 2D visualizations, and calculated Silhouette, ARI, and NMI metrics to confirm natural diagnostic separation.
 
 
 

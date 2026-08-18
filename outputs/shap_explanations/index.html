@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Biomarker SHAP Explanations Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #151c2c;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --primary: #6366f1;
+            --accent-pos: #ff0d57;
+            --accent-neg: #1e88e5;
+            --border-color: #243049;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 40px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+        }
+        .card-header {
+            padding: 20px;
+            background-color: rgba(99, 102, 241, 0.08);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.4rem;
+        }
+        .gt-badge {
+            background-color: #374151;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #e5e7eb;
+            font-weight: 600;
+        }
+        .card-body {
+            padding: 24px;
+        }
+        .probs-section {
+            margin-bottom: 30px;
+        }
+        .probs-section h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .pills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .pill {
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .pill-active {
+            background-color: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+        .pill-inactive {
+            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .explanation-block {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: rgba(0,0,0,0.15);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .explanation-block:last-child {
+            margin-bottom: 0;
+        }
+        .exp-header {
+            padding: 12px 20px;
+            background-color: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            color: #818cf8;
+        }
+        .exp-content {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            padding: 20px;
+            gap: 20px;
+        }
+        .exp-metrics {
+            flex: 1;
+            min-width: 300px;
+        }
+        .exp-metrics h5 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .exp-metrics h5:nth-of-type(1) {
+            color: var(--accent-pos);
+        }
+        .exp-metrics h5:nth-of-type(2) {
+            color: var(--accent-neg);
+        }
+        .exp-metrics ul {
+            margin: 0 0 20px 0;
+            padding-left: 20px;
+            color: #d1d5db;
+            font-size: 0.9rem;
+        }
+        .exp-metrics li {
+            margin-bottom: 6px;
+        }
+        .exp-plot {
+            flex: 1.5;
+            min-width: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .shap-img {
+            max-width: 100%;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ECG Biomarker SHAP Explanations Report</h1>
+            <p>Instance-level feature attributions for multi-label predictions across the Attention MLP pipeline</p>
+        </header>
+        <main>
+            
+        <div class="card">
+            <div class="card-header">
+                <h3>Record ID: 3</h3>
+                <span class="gt-badge">Ground Truth: NORM</span>
+            </div>
+            <div class="card-body">
+                <div class="probs-section">
+                    <h4>Pipeline Probabilities</h4>
+                    <div class="pills-container"><div class="pill pill-active">NORM: 0.7717 (thresh: 0.40)</div><div class="pill pill-inactive">MI: 0.1632 (thresh: 0.60)</div><div class="pill pill-active">STTC: 0.7488 (thresh: 0.59)</div><div class="pill pill-inactive">CD: 0.1576 (thresh: 0.59)</div><div class="pill pill-inactive">HYP: 0.0386 (thresh: 0.76)</div></div>
+                </div>
+                
+            <div class="explanation-block">
+                <div class="exp-header">SHAP Explanation for prediction: NORM (0.7717)</div>
+                <div class="exp-content">
+                    <div class="exp-metrics">
+                        <h5>Top Positive Contributing Biomarkers</h5>
+                        <ul><li><strong>qrs_t_angle</strong>: +0.0775 (val: 31.75)</li><li><strong>p_duration</strong>: +0.0628 (val: 80.20)</li><li><strong>pr_interval</strong>: +0.0549 (val: 76.60)</li><li><strong>t_wave_axis</strong>: +0.0507 (val: -19.56)</li><li><strong>max_t_amplitude</strong>: +0.0303 (val: 0.21)</li></ul>
+                        <h5>Top Negative Contributing Biomarkers</h5>
+                        <ul><li>None</li></ul>
+                    </div>
+                    <div class="exp-plot">
+                        <img src="shap_explanation_record_3_NORM.png" alt="SHAP Plot NORM" class="shap-img">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="explanation-block">
+                <div class="exp-header">SHAP Explanation for prediction: STTC (0.7488)</div>
+                <div class="exp-content">
+                    <div class="exp-metrics">
+                        <h5>Top Positive Contributing Biomarkers</h5>
+                        <ul><li><strong>num_leads_t_inversion</strong>: +0.2607 (val: 8.00)</li><li><strong>mean_t_amplitude</strong>: +0.0656 (val: 0.11)</li><li><strong>qtc_interval</strong>: +0.0567 (val: 360.71)</li><li><strong>qrs_axis</strong>: +0.0383 (val: 12.19)</li><li><strong>v1_r_amplitude</strong>: +0.0297 (val: -0.41)</li></ul>
+                        <h5>Top Negative Contributing Biomarkers</h5>
+                        <ul><li><strong>qrs_t_angle</strong>: -0.0489 (val: 31.75)</li><li><strong>p_duration</strong>: -0.0376 (val: 80.20)</li><li><strong>t_wave_axis</strong>: -0.0330 (val: -19.56)</li><li><strong>r_progression_slope</strong>: -0.0281 (val: 0.19)</li></ul>
+                    </div>
+                    <div class="exp-plot">
+                        <img src="shap_explanation_record_3_STTC.png" alt="SHAP Plot STTC" class="shap-img">
+                    </div>
+                </div>
+            </div>
+            
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Record ID: 146</h3>
+                <span class="gt-badge">Ground Truth: MI, STTC, HYP</span>
+            </div>
+            <div class="card-body">
+                <div class="probs-section">
+                    <h4>Pipeline Probabilities</h4>
+                    <div class="pills-container"><div class="pill pill-inactive">NORM: 0.0220 (thresh: 0.40)</div><div class="pill pill-active">MI: 0.8904 (thresh: 0.60)</div><div class="pill pill-active">STTC: 0.8227 (thresh: 0.59)</div><div class="pill pill-inactive">CD: 0.3050 (thresh: 0.59)</div><div class="pill pill-active">HYP: 0.9068 (thresh: 0.76)</div></div>
+                </div>
+                
+            <div class="explanation-block">
+                <div class="exp-header">SHAP Explanation for prediction: MI (0.8904)</div>
+                <div class="exp-content">
+                    <div class="exp-metrics">
+                        <h5>Top Positive Contributing Biomarkers</h5>
+                        <ul><li><strong>t_wave_axis</strong>: +0.1937 (val: 108.11)</li><li><strong>num_leads_st_deviation</strong>: +0.1461 (val: 8.00)</li><li><strong>max_st_depression</strong>: +0.0839 (val: 0.42)</li><li><strong>qt_interval</strong>: +0.0543 (val: 314.22)</li><li><strong>v1_r_amplitude</strong>: +0.0445 (val: -0.87)</li></ul>
+                        <h5>Top Negative Contributing Biomarkers</h5>
+                        <ul><li><strong>qrs_axis</strong>: -0.1635 (val: 87.65)</li></ul>
+                    </div>
+                    <div class="exp-plot">
+                        <img src="shap_explanation_record_146_MI.png" alt="SHAP Plot MI" class="shap-img">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="explanation-block">
+                <div class="exp-header">SHAP Explanation for prediction: STTC (0.8227)</div>
+                <div class="exp-content">
+                    <div class="exp-metrics">
+                        <h5>Top Positive Contributing Biomarkers</h5>
+                        <ul><li><strong>num_leads_t_inversion</strong>: +0.1272 (val: 7.00)</li><li><strong>t_wave_axis</strong>: +0.1214 (val: 108.11)</li><li><strong>max_st_depression</strong>: +0.1080 (val: 0.42)</li><li><strong>qt_interval</strong>: +0.0677 (val: 314.22)</li><li><strong>num_leads_st_deviation</strong>: +0.0461 (val: 8.00)</li></ul>
+                        <h5>Top Negative Contributing Biomarkers</h5>
+                        <ul><li><strong>qrs_axis</strong>: -0.1117 (val: 87.65)</li><li><strong>qrs_t_angle</strong>: -0.0551 (val: 20.45)</li></ul>
+                    </div>
+                    <div class="exp-plot">
+                        <img src="shap_explanation_record_146_STTC.png" alt="SHAP Plot STTC" class="shap-img">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="explanation-block">
+                <div class="exp-header">SHAP Explanation for prediction: HYP (0.9068)</div>
+                <div class="exp-content">
+                    <div class="exp-metrics">
+                        <h5>Top Positive Contributing Biomarkers</h5>
+                        <ul><li><strong>max_r_v1_v6</strong>: +0.1125 (val: 1.56)</li><li><strong>r_progression_slope</strong>: +0.0969 (val: 0.54)</li><li><strong>max_st_depression</strong>: +0.0652 (val: 0.42)</li><li><strong>t_wave_axis</strong>: +0.0616 (val: 108.11)</li><li><strong>p_amplitude</strong>: +0.0498 (val: 0.17)</li></ul>
+                        <h5>Top Negative Contributing Biomarkers</h5>
+                        <ul><li>None</li></ul>
+                    </div>
+                    <div class="exp-plot">
+                        <img src="shap_explanation_record_146_HYP.png" alt="SHAP Plot HYP" class="shap-img">
+                    </div>
+                </div>
+            </div>
+            
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Record ID: 54</h3>
+                <span class="gt-badge">Ground Truth: STTC</span>
+            </div>
+            <div class="card-body">
+                <div class="probs-section">
+                    <h4>Pipeline Probabilities</h4>
+                    <div class="pills-container"><div class="pill pill-inactive">NORM: 0.3366 (thresh: 0.40)</div><div class="pill pill-active">MI: 0.6239 (thresh: 0.60)</div><div class="pill pill-inactive">STTC: 0.5792 (thresh: 0.59)</div><div class="pill pill-inactive">CD: 0.2620 (thresh: 0.59)</div><div class="pill pill-inactive">HYP: 0.4538 (thresh: 0.76)</div></div>
+                </div>
+                
+            <div class="explanation-block">
+                <div class="exp-header">SHAP Explanation for prediction: MI (0.6239)</div>
+                <div class="exp-content">
+                    <div class="exp-metrics">
+                        <h5>Top Positive Contributing Biomarkers</h5>
+                        <ul><li><strong>t_wave_axis</strong>: +0.0901 (val: 66.53)</li><li><strong>qrs_axis</strong>: +0.0599 (val: 11.27)</li><li><strong>p_amplitude</strong>: +0.0407 (val: 0.22)</li><li><strong>heart_rate</strong>: +0.0267 (val: 90.89)</li><li><strong>max_st_elevation</strong>: +0.0221 (val: 0.23)</li></ul>
+                        <h5>Top Negative Contributing Biomarkers</h5>
+                        <ul><li><strong>pr_interval</strong>: -0.0725 (val: 86.13)</li></ul>
+                    </div>
+                    <div class="exp-plot">
+                        <img src="shap_explanation_record_54_MI.png" alt="SHAP Plot MI" class="shap-img">
+                    </div>
+                </div>
+            </div>
+            
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Record ID: 45</h3>
+                <span class="gt-badge">Ground Truth: CD, HYP</span>
+            </div>
+            <div class="card-body">
+                <div class="probs-section">
+                    <h4>Pipeline Probabilities</h4>
+                    <div class="pills-container"><div class="pill pill-active">NORM: 0.7235 (thresh: 0.40)</div><div class="pill pill-inactive">MI: 0.1896 (thresh: 0.60)</div><div class="pill pill-inactive">STTC: 0.0220 (thresh: 0.59)</div><div class="pill pill-active">CD: 0.6393 (thresh: 0.59)</div><div class="pill pill-inactive">HYP: 0.1462 (thresh: 0.76)</div></div>
+                </div>
+                
+            <div class="explanation-block">
+                <div class="exp-header">SHAP Explanation for prediction: NORM (0.7235)</div>
+                <div class="exp-content">
+                    <div class="exp-metrics">
+                        <h5>Top Positive Contributing Biomarkers</h5>
+                        <ul><li><strong>qrs_t_angle</strong>: +0.0960 (val: 3.33)</li><li><strong>num_leads_t_inversion</strong>: +0.0654 (val: 3.00)</li><li><strong>t_wave_axis</strong>: +0.0532 (val: 30.70)</li><li><strong>num_leads_st_deviation</strong>: +0.0512 (val: 0.00)</li><li><strong>pr_interval</strong>: +0.0479 (val: 80.00)</li></ul>
+                        <h5>Top Negative Contributing Biomarkers</h5>
+                        <ul><li><strong>heart_rate</strong>: -0.0823 (val: 92.82)</li></ul>
+                    </div>
+                    <div class="exp-plot">
+                        <img src="shap_explanation_record_45_NORM.png" alt="SHAP Plot NORM" class="shap-img">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="explanation-block">
+                <div class="exp-header">SHAP Explanation for prediction: CD (0.6393)</div>
+                <div class="exp-content">
+                    <div class="exp-metrics">
+                        <h5>Top Positive Contributing Biomarkers</h5>
+                        <ul><li><strong>v1_r_amplitude</strong>: +0.1283 (val: -0.30)</li><li><strong>heart_rate</strong>: +0.0655 (val: 92.82)</li><li><strong>qtc_interval</strong>: +0.0481 (val: 493.30)</li><li><strong>mean_t_amplitude</strong>: +0.0325 (val: 0.29)</li><li><strong>v1_s_amplitude</strong>: +0.0316 (val: -0.30)</li></ul>
+                        <h5>Top Negative Contributing Biomarkers</h5>
+                        <ul><li><strong>qrs_t_angle</strong>: -0.0672 (val: 3.33)</li><li><strong>max_r_v1_v6</strong>: -0.0509 (val: 0.62)</li></ul>
+                    </div>
+                    <div class="exp-plot">
+                        <img src="shap_explanation_record_45_CD.png" alt="SHAP Plot CD" class="shap-img">
+                    </div>
+                </div>
+            </div>
+            
+            </div>
+        </div>
+        
+        </main>
+    </div>
+</body>
+</html>
