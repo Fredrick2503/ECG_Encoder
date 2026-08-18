@@ -105,6 +105,9 @@ Completed:
 * Re-validated and configured the virtual environment (`.venv`) inheriting system site packages. Appended `optuna` to `requirements.txt` and verified package imports.
 * Upgraded the ECG Feature Extractor (`biomarker_extractor.py`) to support 60 clinical biomarkers (e.g. J-point amplitude, ST-segment area, Sokolow-Lyon/Cornell indices, QRS-T angle, and secondary peaks).
 * Executed feature set comparison experiments (`run_feature_comparison.py`) comparing the old (256 dimensions) and new (606 dimensions) biomarker setups, showing lower reconstruction MSE/MAE across Attention MLP, Beta-VAE, and FT-Transformer models.
+* Ran optimized parallel biomarker extraction on the full PTB-XL dataset (21,837 records) in 48 minutes, generating 24 clinical features and quality logs.
+* Trained Attention MLP, Beta-VAE, and FT-Transformer biomarker encoder models on the full dataset with patient-wise splitting, generated 32-dim latent embeddings, and compiled a comprehensive comparative evaluation report.
+* Performed unsupervised clustering validation (K-Means K=5) on the 32-dimensional embeddings, generated PCA and t-SNE 2D visualizations, and calculated Silhouette, ARI, and NMI metrics to confirm natural diagnostic separation.
 
 
 
