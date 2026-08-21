@@ -15,9 +15,24 @@ project_root = Path(__file__).resolve().parent.parent if "__file__" in locals() 
 sys.path.append(str(project_root))
 
 from data_management.dataset_factory import DatasetFactory
-from run_benchmark_c import load_data
 from classification.classifier import MLPClassifier, ZFusedDataset
-from run_benchmark_e import expected_calibration_error, compute_brier_score
+
+def expected_calibration_error(y_true, y_prob, n_bins=10):
+    bin_boundaries = np.linspace(0, 1, n_bins + 1)
+    ece = 0.0
+    for i in range(n_bins):
+        bin_lower = bin_boundaries[i]
+        bin_upper = bin_boundaries[i + 1]
+        in_bin = (y_prob >= bin_lower) & (y_prob < bin_upper)
+        prop_in_bin = np.mean(in_bin)
+        if prop_in_bin > 0:
+            accuracy_in_bin = np.mean(y_true[in_bin])
+            avg_confidence_in_bin = np.mean(y_prob[in_bin])
+            ece += prop_in_bin * np.abs(avg_confidence_in_bin - accuracy_in_bin)
+    return ece
+
+def compute_brier_score(y_true, y_prob):
+    return np.mean((y_true - y_prob) ** 2)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 os.makedirs("outputs/reports", exist_ok=True)
@@ -122,12 +137,12 @@ def main():
     thrs_b = np.load("models/classification_mlp_age_18_30_thresholds.npy") if os.path.exists("models/classification_mlp_age_18_30_thresholds.npy") else np.full(5, 0.5)
     thrs_a = np.load("models/classification_mlp_age_18_30_tm_thresholds.npy") if os.path.exists("models/classification_mlp_age_18_30_tm_thresholds.npy") else np.full(5, 0.5)
     
-    model_b = MLPClassifier(input_dim=1056, hidden_dim=128, num_classes=5).to(device)
+    model_b = MLPClassifier(input_dim=1056, hidden_dim=256, num_classes=5).to(device)
     if os.path.exists("models/classification_mlp_age_18_30.pt"):
         model_b.load_state_dict(torch.load("models/classification_mlp_age_18_30.pt", map_location=device))
     model_b.eval()
     
-    model_a = MLPClassifier(input_dim=1024, hidden_dim=128, num_classes=5).to(device)
+    model_a = MLPClassifier(input_dim=1024, hidden_dim=64, num_classes=5).to(device)
     if os.path.exists("models/classification_mlp_age_18_30_tm.pt"):
         model_a.load_state_dict(torch.load("models/classification_mlp_age_18_30_tm.pt", map_location=device))
     model_a.eval()
