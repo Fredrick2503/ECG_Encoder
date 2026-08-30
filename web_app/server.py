@@ -13,6 +13,7 @@ import mimetypes
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
+from typing import Any, Optional
 import numpy as np
 import torch
 
@@ -40,6 +41,9 @@ def get_engine() -> ECGEncoderEngine:
         device = "cuda" if torch.cuda.is_available() else "cpu"
         cfg = EngineConfig(device=device)
         engine = ECGEncoderEngine(config=cfg)
+        print(f"[Engine] Loaded — Biomarker model: {cfg.biomarker_model_path}")
+        print(f"[Engine] Imputer: {cfg.imputer_path} | Scaler: {cfg.scaler_path}")
+        print(f"[Engine] Biomarker input dim: {engine.biomarker_service.num_features} features")
     return engine
 
 
@@ -69,6 +73,29 @@ class ECGWebAppHandler(BaseHTTPRequestHandler):
         if path == "/api/embeddings_3d" or path == "/api/embeddings":
             emb = sample_manager.get_3d_embeddings()
             self._send_json(emb)
+            return
+
+        elif path == "/api/engine_info":
+            eng = get_engine()
+            cfg = eng.config
+            self._send_json({
+                "status": "ok",
+                "device": str(eng.device),
+                "temporal_model": cfg.temporal_model_path,
+                "morphology_model": cfg.morphology_model_path,
+                "biomarker_model": cfg.biomarker_model_path,
+                "imputer": cfg.imputer_path,
+                "scaler": cfg.scaler_path,
+                "biomarker_input_dim": eng.biomarker_service.num_features,
+                "biomarker_features": [
+                    "RR_Mean", "QRS_Duration", "PR_Interval", "QT_Interval", "QTc_Bazett",
+                    "ST_Duration", "P_wave_Duration", "R_Amplitude", "P_Amplitude", "T_Amplitude",
+                    "ST_Deviation", "Q_Amplitude", "R_S_Ratio", "QRS_Energy", "SDNN",
+                    "RMSSD", "pNN50", "pNN20", "SDRR_RMSSD_Ratio", "HRV_Triangular_Index",
+                    "LF_Power", "HF_Power", "LF_HF_Ratio", "Total_Power"
+                ],
+                "fusion_dims": {"temporal": 512, "morphology": 512, "biomarker": 32, "fused": 1056}
+            })
             return
 
         elif path == "/api/records" or path == "/api/samples":
@@ -157,28 +184,50 @@ class ECGWebAppHandler(BaseHTTPRequestHandler):
             try:
                 eng = get_engine()
                 signal_data = req_data.get("signal")
-                raw_bio = req_data.get("biomarkers")
+                raw_bio = req_data.get("biomarkers")  # dict of named biomarker values from client
                 
                 if signal_data is None:
                     self._send_json({"status": "error", "message": "Missing signal data"}, 400)
                     return
                     
-                signal_arr = np.array(signal_data, dtype=np.float32) # (12, 1000)
-                
-                # Execute Engine Pipeline
-                rep, pred = eng.process(signal_arr)
-                
-                # Generate Spectrogram Representation for Morphology visualization
+                signal_arr = np.array(signal_data, dtype=np.float32)  # (12, 1000)
+
+                # Convert named biomarker dict → ordered feature array for the engine
+                bio_feature_names = [
+                    "RR_Mean", "QRS_Duration", "PR_Interval", "QT_Interval", "QTc_Bazett",
+                    "ST_Duration", "P_wave_Duration", "R_Amplitude", "P_Amplitude", "T_Amplitude",
+                    "ST_Deviation", "Q_Amplitude", "R_S_Ratio", "QRS_Energy", "SDNN",
+                    "RMSSD", "pNN50", "pNN20", "SDRR_RMSSD_Ratio", "HRV_Triangular_Index",
+                    "LF_Power", "HF_Power", "LF_HF_Ratio", "Total_Power"
+                ]
+                biomarker_features_arr: Optional[np.ndarray] = None
+                raw_named: dict = {}
+                if raw_bio and isinstance(raw_bio, dict):
+                    raw_named = raw_bio
+                    feat_row = np.array(
+                        [float(raw_bio.get(k, float("nan"))) for k in bio_feature_names],
+                        dtype=np.float32
+                    )
+                    biomarker_features_arr = feat_row.reshape(1, -1)  # (1, 24)
+
+                # Execute Engine Pipeline — pass actual biomarker features if provided
+                rep, pred = eng.process(signal_arr, biomarker_features=biomarker_features_arr)
+
+                # Generate Spectrogram & Saliency for visualization
                 with torch.no_grad():
                     x_t = eng.preprocessor.preprocess(signal_arr).to(eng.device)
-                    spec_tensor = ecg_to_spectrogram(x_t).cpu().numpy()[0] # (12, freq, time)
-                    
-                    # Compute temporal saliency gradient proxy (activation energy across leads)
+                    spec_tensor = ecg_to_spectrogram(x_t).cpu().numpy()[0]  # (12, freq, time)
+
                     saliency_map = np.abs(np.diff(signal_arr, axis=1, prepend=signal_arr[:, :1]))
-                    # Normalize saliency to [0, 1] per lead
                     s_min = saliency_map.min(axis=1, keepdims=True)
                     s_max = saliency_map.max(axis=1, keepdims=True) + 1e-6
                     saliency_norm = (saliency_map - s_min) / (s_max - s_min)
+
+                # Build named biomarker values for UI (use raw values if available, else NaN)
+                named_biomarkers = {
+                    k: (float(raw_named[k]) if k in raw_named else None)
+                    for k in bio_feature_names
+                }
 
                 response_data = {
                     "status": "success",
@@ -204,8 +253,14 @@ class ECGWebAppHandler(BaseHTTPRequestHandler):
                         },
                         "detected_conditions": pred.detected_conditions[0]
                     },
+                    "biomarkers": named_biomarkers,
+                    "biomarker_encoder": {
+                        "model": eng.config.biomarker_model_path,
+                        "input_dim": eng.biomarker_service.num_features,
+                        "embedding_dim": int(rep.z_biomarker.shape[1]),
+                    },
                     "visualizations": {
-                        "spectrogram_lead_ii": spec_tensor[1].tolist(), # Lead II Spectrogram
+                        "spectrogram_lead_ii": spec_tensor[1].tolist(),
                         "saliency_lead_ii": saliency_norm[1].tolist(),
                     }
                 }
