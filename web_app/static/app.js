@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ECG Multimodal Representation Cockpit "” Interactive Frontend Controller
  */
 
@@ -230,6 +230,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function getDisplayHR(r) {
+        if (!r) return 75;
+        let hr = r.heart_rate;
+        if (hr != null) {
+            if (hr > 300) return Math.round(60000.0 / hr);
+            if (hr > 10 && hr <= 250) return Math.round(hr);
+        }
+        if (r.biomarkers && r.biomarkers.RR_Mean) {
+            let rr = r.biomarkers.RR_Mean;
+            if (rr > 0 && rr < 3.0) return Math.round(60.0 / rr);
+            if (rr >= 300) return Math.round(60000.0 / rr);
+        }
+        return 75;
+    }
+
     let isFirstLoad = true;
 
     async function loadRecordsCatalog() {
@@ -252,12 +267,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 const tr = document.createElement("tr");
                 if (r.id === currentRecordId) tr.classList.add("active-row");
 
+                const hrVal = getDisplayHR(r);
                 tr.innerHTML = `
                     <td><strong>${r.sample_code || r.id}</strong></td>
                     <td>${r.age}yo ${r.sex}</td>
                     <td><span class="patient-tag tag-${r.category.toLowerCase()}">${r.category}</span></td>
                     <td>${r.clinical_history || 'Routine 12-lead study'}</td>
-                    <td>${r.heart_rate > 300 ? Math.round(60000 / r.heart_rate) : (r.heart_rate || 75)} bpm</td>
+                    <td>${hrVal} bpm</td>
                     <td><button class="btn-run-pipeline" data-id="${r.id}">▶ Run Pipeline</button></td>
                 `;
 
@@ -343,13 +359,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const record = payload.record;
         
         // Header
-        if (activeRecordTitle) activeRecordTitle.textContent = `Patient Case "” ${record.name || record.id}`;
+        if (activeRecordTitle) activeRecordTitle.textContent = `Patient Case — ${record.name || record.id}`;
         if (activeRecordTag) {
             activeRecordTag.textContent = `DIAGNOSTIC CLASS: ${record.category}`;
             activeRecordTag.className = `patient-tag tag-${record.category.toLowerCase()}`;
         }
         if (activeRecordMeta) {
-            const displayHR = record.heart_rate > 300 ? Math.round(60000 / record.heart_rate) : (record.heart_rate || 75);
+            const displayHR = getDisplayHR(record);
             activeRecordMeta.textContent = `${record.age}yo ${record.sex}  ·  Heart Rate: ${displayHR} bpm  ·  Ground Truth: ${(record.ground_truth || []).join(', ')}`;
         }
 
