@@ -204,6 +204,8 @@ class DatasetManager:
         except Exception as e:
             print(f"[!] Translator overlap notice: {e}")
 
+        model_confidences = self._compute_model_confidences(signal_tensor, cat)
+
         result = {
             "record": record,
             "leads": LEAD_NAMES,
