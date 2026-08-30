@@ -1,4 +1,9 @@
+# Secrets and environment configs
+.env
+.env.*
+
 # Byte-compiled / optimized / DLL files
+
 __pycache__/
 *.py[codz]
 *$py.class
@@ -213,7 +218,12 @@ cython_debug/
 
 # Abstra
 #   Abstra is an AI-powered process automation framework.
-#   Ignore directories containing user credentials, local state, and settings.
+# Environment variables & secrets
+.env
+.env.*
+
+# Output directories
+ containing user credentials, local state, and settings.
 #   Learn more at https://abstra.io/docs
 .abstra/
 

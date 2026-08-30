@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Foundation Representation System — Clinical & Research AI Cockpit</title>
+    <meta name="description" content="Interactive Multimodal 12-Lead ECG Foundation Representation System with Gemini LLM Clinical & Electrophysiological Interpretation.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chart.js & Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Ambient Glow -->
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <!-- Header Navigation -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="logo-badge">
+                <span class="pulse-dot"></span>
+                <span class="logo-title">ECG FOUNDATION ENGINE</span>
+            </div>
+            <span class="badge-version">v2.4 Multimodal (1056-D)</span>
+            <span class="badge-llm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Gemini 2.5 AI Active
+            </span>
+        </div>
+        <div class="header-right">
+            <div class="case-selector-wrapper">
+                <label for="sampleSelect">Select Clinical Record:</label>
+                <select id="sampleSelect" class="styled-select" aria-label="Select Clinical Record">
+                    <option value="" disabled selected>Loading records...</option>
+                </select>
+            </div>
+            <button id="btnAnalyze" class="btn-primary" aria-label="Run Multimodal AI Analysis">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Run Full Analysis</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <main class="dashboard-grid">
+        
+        <!-- ROW 1: Patient Header & Diagnostic Superclass Predictions -->
+        <section class="card patient-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">🫀</span>
+                    <h2>Case Profile & Ground Truth</h2>
+                </div>
+                <div class="tag-status" id="patientCategoryBadge">NORMAL</div>
+            </div>
+            <div class="patient-details-grid">
+                <div class="meta-item">
+                    <span class="meta-label">Record ID</span>
+                    <span class="meta-val" id="valRecordId">CASE-NORM-01</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Age / Sex</span>
+                    <span class="meta-val" id="valAgeSex">34 / Female</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Est. Heart Rate</span>
+                    <span class="meta-val highlight-val" id="valHeartRate">72 bpm</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Ground Truth</span>
+                    <span class="meta-val text-success" id="valGroundTruth">NORM</span>
+                </div>
+            </div>
+            <p class="clinical-history-text" id="valHistory">Routine pre-employment screening. Asymptomatic with normal physical examination.</p>
+        </section>
+
+        <!-- Diagnostic Prediction Panel -->
+        <section class="card prediction-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">⚡</span>
+                    <h2>Multi-Label Diagnostic Classification (Calibrated F1 Thresholds)</h2>
+                </div>
+                <span class="latent-pill">Joint Latent: z_fused ∈ ℝ¹⁰⁵⁶</span>
+            </div>
+            <div class="probability-bars-container" id="probBarsContainer">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- ROW 2: Interactive 12-Lead Waveform Canvas -->
+        <section class="card ecg-canvas-card full-width">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">📈</span>
+                    <h2>12-Lead Standard Clinical ECG (25 mm/s, 10 mm/mV)</h2>
+                </div>
+                <div class="canvas-controls">
+                    <div class="btn-group" role="group">
+                        <button class="btn-toggle active" id="btnGrid12" data-mode="12">12-Lead Standard (3×4)</button>
+                        <button class="btn-toggle" id="btnGridLeadII" data-mode="lead2">Rhythm Strip (Lead II)</button>
+                    </div>
+                </div>
+            </div>
+            <div class="canvas-container">
+                <canvas id="ecgCanvas"></canvas>
+            </div>
+            <div class="canvas-footer-legend">
+                <span><span class="legend-dot dot-cyan"></span> Voltage Scale: 0.1 mV / div</span>
+                <span><span class="legend-dot dot-orange"></span> Time Scale: 40 ms / div (Small Box)</span>
+                <span><span class="legend-dot dot-green"></span> Sampling Rate: 100 Hz</span>
+            </div>
+        </section>
+
+        <!-- ROW 3: Multimodal Explainability (Temporal & Morphology) -->
+        <section class="card explain-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">⏱️</span>
+                    <h2>Temporal Encoder (1D ResNet-SE • 512-D)</h2>
+                </div>
+                <span class="latent-pill">Saliency & Attention</span>
+            </div>
+            <p class="explain-desc">Gradient attention highlights demonstrating key temporal activation triggers (QRS onset & T-wave repolarization):</p>
+            <div class="temporal-chart-wrapper">
+                <canvas id="saliencyCanvas" height="130"></canvas>
+            </div>
+            <div class="embedding-telemetry" id="temporalEmbedTelemetry">
+                <span class="telemetry-label">Embedding Vector (z_t preview):</span>
+                <code class="telemetry-code" id="codeTemporal">Loading...</code>
+            </div>
+        </section>
+
+        <section class="card explain-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">🌊</span>
+                    <h2>Morphology Encoder (2D Spectrogram • 512-D)</h2>
+                </div>
+                <span class="latent-pill">Time-Frequency Latent</span>
+            </div>
+            <p class="explain-desc">Spectral power density (0–50 Hz) capturing spatial waveform contour distortions:</p>
+            <div class="spectrogram-container">
+                <canvas id="spectrogramCanvas" height="130"></canvas>
+            </div>
+            <div class="embedding-telemetry" id="morphologyEmbedTelemetry">
+                <span class="telemetry-label">Embedding Vector (z_m preview):</span>
+                <code class="telemetry-code" id="codeMorphology">Loading...</code>
+            </div>
+        </section>
+
+        <!-- ROW 4: Biomarkers & Quantitative Electrophysiology -->
+        <section class="card biomarker-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">🔬</span>
+                    <h2>Clinical Biomarkers & HRV Profile (Attention MLP • 32-D)</h2>
+                </div>
+                <span class="latent-pill">Missingness-Masked</span>
+            </div>
+            <div class="biomarker-content-grid">
+                <div class="radar-chart-container">
+                    <canvas id="biomarkerRadarChart"></canvas>
+                </div>
+                <div class="biomarker-table-container">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Clinical Biomarker</th>
+                                <th>Measured</th>
+                                <th>Ref. Interval</th>
+                                <th>Evaluation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="biomarkerTableBody">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROW 5: Gemini LLM Clinical & Research Intelligence Report -->
+        <section class="card llm-report-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">🤖</span>
+                    <h2>Gemini AI — Clinical Consultation & Research Interpretation</h2>
+                </div>
+                <button id="btnRegenLLM" class="btn-secondary" aria-label="Regenerate Clinical Synthesis">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    <span>Regenerate Synthesis</span>
+                </button>
+            </div>
+            <div class="llm-report-body" id="llmReportContent">
+                <div class="llm-loading-state">
+                    <span class="spinner"></span>
+                    <p>Generating expert cardiological synthesis from multimodal representations via Gemini API...</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <p>ECG Foundation Representation System • Multimodal Deep Learning (Temporal ResNet-SE + Morphology 2D ResNet + Biomarker Attention MLP) • Powered by Gemini AI</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

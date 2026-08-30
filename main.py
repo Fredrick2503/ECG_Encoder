@@ -131,6 +131,10 @@ def main():
     predict_parser.add_argument("--input", "-i", type=str, required=True, help="Path to .npy array or signal file")
     predict_parser.add_argument("--device", type=str, default="cpu", help="Device (cpu or cuda)")
     
+    # Web App command
+    app_parser = subparsers.add_parser("app", help="Launch the interactive multimodal web dashboard")
+    app_parser.add_argument("--port", "-p", type=int, default=8080, help="Port to host web dashboard (default: 8080)")
+    
     args = parser.parse_args()
     
     if args.command == "demo" or args.command is None:
@@ -139,6 +143,9 @@ def main():
         run_demo(device=device)
     elif args.command == "info":
         print_info()
+    elif args.command == "app":
+        from web_app.server import start_server
+        start_server(port=args.port)
     elif args.command == "encode":
         import numpy as np
         from ecg_engine import ECGEncoderEngine, EngineConfig

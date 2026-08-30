@@ -1,0 +1,118 @@
+# Project Walkthrough: ECG Foundation Representation System
+
+This walkthrough details the development history, model architectures, benchmarking phases, explainability integration, and current unified state of the **ECG Foundation Representation System**.
+
+---
+
+## 1. Project Goal & High-Level Architecture
+The primary objective of this project is to build a multi-modal foundation system for 12-lead ECG representation learning. The system is designed to fuse three complementary representations:
+1. **Temporal Encoder ($Z_{temporal}$)**: Captures continuous time-series sequence dynamics.
+2. **Biomarker Encoder ($Z_{biomarker}$)**: Reconstructs and classifies clinical handcrafted features (HRV, intervals, segment amplitudes).
+3. **Morphology Encoder ($Z_{morphology}$)**: Captures beat-level visual shape features (spectrograms, recurrence plots, or GAFs).
+
+The fused representations are eventually passed to a unified classification and downstream clinical prediction engine.
+
+```mermaid
+graph TD
+    RawECG["Raw 12-Lead ECG Data"] --> Preprocess["Signal Preprocessing Pipeline"]
+    
+    %% Encoder Layers
+    Preprocess --> TemporalEnc["Temporal Encoder (ResNet-SE / Transformer)"]
+    Preprocess --> BiomarkerExtract["Clinical Feature Extractor"]
+    Preprocess --> MorphologySegment["Beat Segmenter"]
+    
+    BiomarkerExtract --> BiomarkerEnc["Biomarker Encoder (FT-Transformer Autoencoder)"]
+    MorphologySegment --> MorphologyEnc["Morphology Encoder (2D ResNet)"]
+    
+    %% Embeddings
+    TemporalEnc --> Ztemp["Z_temporal (64-dim)"]
+    BiomarkerEnc --> Zbio["Z_biomarker (32-dim)"]
+    MorphologyEnc --> Zmorph["Z_morphology (512-dim)"]
+    
+    %% Fusion and Output
+    Ztemp & Zbio & Zmorph --> Fusion["Adaptive Fusion Engine"]
+    Fusion --> UnifiedClass["Unified Classifier"]
+    UnifiedClass --> XAI["Grad-CAM & SHAP Explainability"]
+```
+
+---
+
+## 2. Phase 1: Data Engineering & Signal Preprocessing
+### Data Management Layer
+* **Dataset**: [PTB-XL ECG Dataset](https://physionet.org/content/ptb-xl/1.0.3/) containing 21,837 clinical records.
+* **Implementation**: Implemented a robust downloader supporting HTTP Range resumes, patient-wise stratified fold-splitting (to prevent train-test leakage across multiple records of the same patient), and directory junction caching which reduced startup verification delay from 15 minutes to under 0.2 seconds.
+* **File Location**: [`data_management/dataset_factory.py`](file:///c:/Users/fredr/OneDrive/Desktop/Projects/ECG_Encoder/data_management/dataset_factory.py)
+
+### Signal Preprocessing Pipeline
+* **Filtering**: Implemented a combined filtering stack consisting of a third-order Butterworth bandpass filter (0.5–40 Hz) for baseline wander/noise removal and a 50 Hz Notch filter for powerline interference rejection.
+* **Outlier Detection**: Integrated Pan-Tompkins beat segmentation, DBSCAN outlier beat checks, and Z-score/Min-Max/Robust scaling methods.
+
+---
+
+## 3. Phase 2: Temporal Encoder & Benchmarking
+The Temporal Encoder represents the backbone of time-series representation learning. 
+
+### Model Architectures & Upgrades
+* **Models**: Built a comparative training suite with multiple architectures:
+  * **ECGTransformer**: Multi-head self-attention transformer layers.
+  * **ECGResNet1D-SE**: Residual 1D conv blocks with Squeeze-and-Excitation (SE) channel attention.
+  * **ECGMultiScaleCNN**: Dynamic feature extraction over multiple kernel sizes.
+  * **BiLSTM Baseline**: Classic recurrent network.
+* **Loss Functions**: Implemented multi-label learning loss variations:
+  * Asymmetric Loss (ASL)
+  * Frequency-Weighted Sqrt-BCE
+  * Class-Balanced Loss (CBLoss)
+* **Code Location**: [`temporal_encoder/encoder_upgrades.py`](file:///c:/Users/fredr/OneDrive/Desktop/Projects/ECG_Encoder/temporal_encoder/encoder_upgrades.py) and [`utils/losses.py`](file:///c:/Users/fredr/OneDrive/Desktop/Projects/ECG_Encoder/utils/losses.py)
+
+### Benchmarking Iterations (Suites B–E2)
+* **Suite B (Threshold Optimization)**: Proved that sigmoid validation-optimized thresholding dramatically outperformed static thresholds ($t=0.5$), boosting ResNet-SE + Sqrt-BCE Macro F1 from `0.5946` to `0.6471` and Subset Accuracy from `0.3800` to `0.4433`.
+* **Suite C (Loss & Sampling)**: Tested Class-Balanced Loss (C5) and Hard-Minority Sampling (C9) on the full dataset. CBLoss achieved a peak Macro F1 of `0.6782` and Hard-Minority achieved a peak Subset Accuracy of `0.5600`.
+* **Suite D (Error Diagnosis & Coordinate Ascent)**: Conducted exact-match error decomposition. Implemented joint multi-label heads (auxiliary MI/STTC + CD heads) and validation coordinate ascent threshold searches, raising Subset Accuracy to `0.5933`.
+* **Suite E (Probability Fusion & Platt Calibration)**: Implemented decision-level probability fusion between CBLoss (C5) and Aux-Heads (D2-5) with Platt Calibration. Locked model **E1-8** achieved:
+  * **ROC-AUC: 0.8818 | Macro F1: 0.6851 | Subset Accuracy: 0.5833 | Macro ECE: 0.0532**
+* **Suite E2 (Representation Quality Validation)**: Validated frozen representations. The **Joint Concatenated (E2-2)** representation yielded a linear probe ROC-AUC of `0.7331`, kNN Purity of `0.5991`, and NMI of `0.2985`.
+
+---
+
+## 4. Phase 3: Biomarker Encoder
+Handcrafted clinical features provide structured domain knowledge.
+
+### Feature Extraction
+* Extracted 60 clinical biomarkers (e.g., J-point amplitude, ST-segment area, Sokolow-Lyon/Cornell indices, QRS-T angle, and secondary peaks) across all 21,837 PTB-XL records.
+* Concatenated median-imputed biomarker values and binary missingness indicators to handle noisy clinical data robustly.
+
+### Latent Representation Autoencoders
+* **Architectures**: Developed Attention MLP, Beta-VAE, and FT-Transformer models.
+* **Dual-Task Head**: Upgraded models with secondary classification heads to jointly reconstruct biomarkers and perform multi-label diagnostic prediction.
+* **Results**: Benchmarked all models; the **FT-Transformer** model was locked as the primary biomarker architecture (lowest reconstruction MSE of `0.4017`). PCA and t-SNE clustering validations verified that the learned 32-dim embeddings naturally segregate by clinical diagnostic classes.
+* **Code Location**: [`biomarkers/`](file:///c:/Users/fredr/OneDrive/Desktop/Projects/ECG_Encoder/biomarkers/) directory.
+
+---
+
+## 5. Phase 4: Morphology Encoder & Representation Fusion
+### Morphology Encoder Architecture
+* **Implementation**: Developed the `ECGMorphologyEncoder` in [`morphology_encoder/encoder.py`](file:///c:/Users/fredr/OneDrive/Desktop/Projects/ECG_Encoder/morphology_encoder/encoder.py), utilizing a 2D ResNet architecture (4 residual blocks) to process GAF, spectrogram, and scalogram transforms of 12-lead ECG signals.
+* **Latent Output**: Extracts a 512-dimensional beat-level visual shape representation ($Z_{morphology}$) via `get_representation()`.
+* **Execution**: Benchmarked all three input representation types under Class-Balanced loss (`run_scalogram_experiments.py`).
+* **Checkpoints**: Saved checkpoints loaded in `models/` as `morphology_encoder_v1.pt` and `morphology_encoder_scalogram.pt`.
+
+### Adaptive Representation Fusion Suite (F1-F4)
+* **Concatenation Baseline**: Evaluated concatenation baseline $[Z_{temporal} \parallel Z_{morphology}]$ (1024-D).
+* **Learned Fusion MLP**: Trained and validated a learned fusion model (1024-D to 512-D), proving domain complementarity gains (T vs M vs Concatenated vs Learned Fusion) and compiling unified diagnostic clustering results.
+* **Code Location**: [`run_fusion_suite.py`](file:///c:/Users/fredr/OneDrive/Desktop/Projects/ECG_Encoder/run_fusion_suite.py).
+
+---
+
+## 6. Phase 5: Explainability (Grad-CAM XAI)
+To make the foundation representations clinically auditable, we built an explainability module:
+* **Attribution Methods**: Integrated Integrated Gradients (1D), Occlusion Saliency (1D), Grad-CAM (2D over features), and Lead-Specific Guided Grad-CAM.
+* **XAI Overlap Metric**: Formulated a `GradCAMTranslator` metric validating temporal overlap between high-saliency segments and annotated waves (P-wave, QRS, T-wave).
+* **Code Location**: [`explainability/`](file:///c:/Users/fredr/OneDrive/Desktop/Projects/ECG_Encoder/explainability/) directory.
+
+---
+
+## 7. Current State & Next Steps
+Following the merge, the local workspace represents a unified code environment where:
+* Both **Temporal Encoder**, **Biomarker Encoder**, and **Morphology Encoder** (2D ResNet) are fully implemented, optimized, and frozen.
+* Pretrained models, classification reports, and database migrations are compiled.
+* **Next Priority**: Develop the **Unified Classification Engine** on top of the final fused representation space ($Z_{fused}$).
