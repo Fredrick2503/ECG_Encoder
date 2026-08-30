@@ -111,6 +111,18 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        const manifoldModeSelect = document.getElementById("manifoldModeSelect");
+        const latentPillTag = document.getElementById("latentPillTag");
+        if (manifoldModeSelect) {
+            manifoldModeSelect.addEventListener("change", (e) => {
+                const mode = e.target.value;
+                if (latentPillTag) {
+                    latentPillTag.textContent = mode === "tsne" ? "z_fused ∈ ℝ¹⁰⁵⁶ → t-SNE 3D" : "z_fused ∈ ℝ¹⁰⁵⁶ → PCA 3D";
+                }
+                renderPlotly3D();
+            });
+        }
+
         window.addEventListener("resize", () => {
             if (plotlyContainer && window.Plotly) Plotly.Plots.resize(plotlyContainer);
             if (currentRecordId) selectRecord(currentRecordId);
@@ -128,9 +140,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderPlotly3D() {
-        if (!plotlyContainer || !window.Plotly || !embeddings3DData || !embeddings3DData.population_points) return;
+        if (!plotlyContainer || !window.Plotly || !embeddings3DData) return;
 
-        const points = embeddings3DData.population_points;
+        const manifoldModeSelect = document.getElementById("manifoldModeSelect");
+        const mode = manifoldModeSelect ? manifoldModeSelect.value : "tsne";
+        const points = (mode === "pca" && embeddings3DData.population_points_pca) ? 
+            embeddings3DData.population_points_pca : 
+            (embeddings3DData.population_points_tsne || embeddings3DData.population_points || []);
+
         const categories = ["NORM", "MI", "STTC", "CD", "HYP"];
         const colorMap = {
             NORM: "#10b981",
@@ -154,20 +171,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 type: 'scatter3d',
                 name: cat,
                 marker: {
-                    size: 4.5,
+                    size: 4.8,
                     color: colorMap[cat],
-                    opacity: 0.82
+                    opacity: 0.85
                 }
             });
         });
 
         // Active Record Highlight Marker
         const activeRecord = allRecords.find(r => r.id === currentRecordId);
-        if (activeRecord && activeRecord.coords_3d) {
+        const activeCoords = activeRecord ? (activeRecord[`coords_3d_${mode}`] || activeRecord.coords_3d) : null;
+        if (activeCoords) {
             traces.push({
-                x: [activeRecord.coords_3d.x],
-                y: [activeRecord.coords_3d.y],
-                z: [activeRecord.coords_3d.z],
+                x: [activeCoords.x],
+                y: [activeCoords.y],
+                z: [activeCoords.z],
                 text: [`★ ACTIVE: ${activeRecord.name}`],
                 mode: 'markers',
                 type: 'scatter3d',
@@ -181,14 +199,15 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        const axisLabelPrefix = mode === "tsne" ? "t-SNE" : "PCA";
         const layout = {
             margin: { l: 0, r: 0, b: 0, t: 0 },
             paper_bgcolor: 'transparent',
             plot_bgcolor: 'transparent',
             scene: {
-                xaxis: { title: 'PCA 1', gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.2)' },
-                yaxis: { title: 'PCA 2', gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.2)' },
-                zaxis: { title: 'PCA 3', gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.2)' },
+                xaxis: { title: `${axisLabelPrefix} 1`, gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.2)' },
+                yaxis: { title: `${axisLabelPrefix} 2`, gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.2)' },
+                zaxis: { title: `${axisLabelPrefix} 3`, gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.2)' },
                 bgcolor: 'transparent',
                 camera: { eye: { x: 1.4, y: 1.4, z: 1.1 } }
             },
@@ -205,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.points && data.points.length > 0) {
                 const pt = data.points[0];
                 if (pt.customdata) {
-                    selectRecord(pt.customdata);
+                    selectRecord(pt.customdata, true);
                 }
             }
         });
@@ -239,10 +258,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td><span class="patient-tag tag-${r.category.toLowerCase()}">${r.category}</span></td>
                     <td>${r.clinical_history || 'Routine 12-lead study'}</td>
                     <td>${r.heart_rate || 75} bpm</td>
-                    <td><button class="btn-select-record" data-id="${r.id}">Inspect</button></td>
+                    <td><button class="btn-run-pipeline" data-id="${r.id}">▶ Run Pipeline</button></td>
                 `;
 
-                tr.addEventListener("click", () => selectRecord(r.id));
+                tr.addEventListener("click", () => selectRecord(r.id, true));
                 recordsTableBody.appendChild(tr);
             });
 
@@ -266,7 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (isFirstLoad && allRecords.length > 0) {
                 isFirstLoad = false;
-                selectRecord(allRecords[0].id);
+                selectRecord(allRecords[0].id, false);
             }
             
             // Update sample select in header
@@ -289,7 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadRecordsCatalog();
     }
 
-    async function selectRecord(recordId) {
+    async function selectRecord(recordId, shouldScroll = false) {
         currentRecordId = recordId;
 
         if (recordsTableBody) {
@@ -311,6 +330,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
             if (data.status === "success" && data.payload) {
                 renderRecordDetail(data.payload);
+                if (shouldScroll) {
+                    const section = document.getElementById("activeRecordSection") || document.getElementById("sampleDetailCard");
+                    if (section) section.scrollIntoView({ behavior: 'smooth' });
+                }
             }
         } catch (err) {
             console.error("Failed to load record details:", err);

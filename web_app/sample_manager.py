@@ -56,7 +56,9 @@ class DatasetManager:
             with open(self.catalog_file, "r") as fp:
                 data = json.load(fp)
                 self._records = data.get("records", [])
-                self._population_points = data.get("population_points", [])
+                self._population_points_tsne = data.get("population_points_tsne", data.get("population_points", []))
+                self._population_points_pca = data.get("population_points_pca", data.get("population_points", []))
+                self._population_points = self._population_points_tsne
 
     def _init_models(self):
         try:
@@ -88,8 +90,11 @@ class DatasetManager:
 
     def get_3d_embeddings(self) -> Dict[str, Any]:
         return {
-            "population_points": self._population_points,
-            "sample_coords": {r["sample_code"]: {**r["coords_3d"], "category": r["category"], "name": r["name"]} for r in self._records[:10]}
+            "default_mode": "tsne",
+            "population_points": self._population_points_tsne,
+            "population_points_tsne": self._population_points_tsne,
+            "population_points_pca": self._population_points_pca,
+            "sample_coords": {r["sample_code"]: {**r.get("coords_3d_tsne", r.get("coords_3d", {})), "category": r["category"], "name": r["name"]} for r in self._records[:10]}
         }
 
     def _load_real_signal(self, ecg_id: int) -> np.ndarray:

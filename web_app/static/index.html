@@ -52,7 +52,13 @@
                     <span class="card-icon">🌐</span>
                     <h2>3D Latent Space Clustering (Learned Fusion Space • 600 Frozen PTB-XL Records)</h2>
                 </div>
-                <span class="latent-pill">z_fused ∈ ℝ¹⁰⁵⁶ → PCA 3D Manifold</span>
+                <div class="manifold-mode-group">
+                    <select id="manifoldModeSelect" class="manifold-select">
+                        <option value="tsne" selected>t-SNE 3D (Disease Clusters)</option>
+                        <option value="pca">PCA 3D (Global Variance)</option>
+                    </select>
+                    <span class="latent-pill" id="latentPillTag">z_fused ∈ ℝ¹⁰⁵⁶ → t-SNE 3D</span>
+                </div>
             </div>
             <p class="section-subtitle">
                 Interactive 3D manifold projection of multimodal embeddings extracted from the frozen Temporal (ResNet-1D), Morphology (Spectrogram ResNet-2D), and Biomarker encoders. Rotate, pan, zoom, or click on any point to load and inspect that patient's full 12-lead record.
