@@ -334,10 +334,10 @@ document.addEventListener("DOMContentLoaded", () => {
         renderConfidenceTable(payload.model_confidences);
 
         // 1. Raw Waveforms
-        if (rawEcgCanvas) draw12LeadWaveforms(rawEcgCanvas, payload.signal, false);
+        if (rawEcgCanvas) draw12LeadWaveforms(rawEcgCanvas, payload.signal, false, [], `Actual ECG - ${record.category}`);
 
         // 2. Temporal Integrated Gradients Attribution
-        if (temporalAttrCanvas) draw12LeadWaveforms(temporalAttrCanvas, payload.signal, true, payload.temporal_attributions);
+        if (temporalAttrCanvas) draw12LeadWaveforms(temporalAttrCanvas, payload.signal, true, payload.temporal_attributions, `12-Lead Temporal Integrated Gradients Attribution (${record.category})`);
 
         // 3. Morphology 2D Grad-CAM Grid
         if (gradcamGrid) renderGradCAMGrid(payload.morphology_gradcams);
@@ -369,11 +369,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function draw12LeadWaveforms(canvas, signals, overlayAttribution = false, attributions = []) {
+    function draw12LeadWaveforms(canvas, signals, overlayAttribution = false, attributions = [], title = "") {
         if (!canvas || !signals || signals.length < 12) return;
         const ctx = canvas.getContext("2d");
         const rect = canvas.getBoundingClientRect();
-        const displayHeight = 580;
+        const displayHeight = 980;
         
         canvas.width = rect.width * window.devicePixelRatio;
         canvas.height = displayHeight * window.devicePixelRatio;
@@ -382,58 +382,85 @@ document.addEventListener("DOMContentLoaded", () => {
         const width = rect.width;
         const height = displayHeight;
 
-        // Clean Dark Background
-        ctx.fillStyle = "#070d19";
+        // Clean White Medical Publication Canvas
+        ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, width, height);
 
-        // Subtle Medical Telemetry Grid
-        ctx.strokeStyle = "rgba(6, 182, 212, 0.07)";
-        ctx.lineWidth = 0.8;
-        for (let x = 0; x < width; x += 25) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, height);
-            ctx.stroke();
-        }
-        for (let y = 0; y < height; y += 20) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(width, y);
-            ctx.stroke();
-        }
+        const marginTop = 35;
+        const marginBottom = 45;
+        const marginLeft = 65;
+        const marginRight = 30;
+        const plotWidth = width - marginLeft - marginRight;
+        const totalPlotHeight = height - marginTop - marginBottom;
+        const leadHeight = totalPlotHeight / 12;
+        const numSamples = signals[0].length;
 
-        const leadHeight = height / 12;
+        // Top Title if provided
+        if (title) {
+            ctx.fillStyle = "#1e293b";
+            ctx.font = "bold 13px Inter";
+            ctx.textAlign = "center";
+            ctx.fillText(title, width / 2, 22);
+            ctx.textAlign = "left";
+        }
 
         for (let l = 0; l < 12; l++) {
             const leadSignal = signals[l];
             const leadAttr = (overlayAttribution && attributions[l]) ? attributions[l] : null;
-            const baseY = l * leadHeight + leadHeight / 2;
+            const topY = marginTop + l * leadHeight;
+            const bottomY = topY + leadHeight;
+            const midY = topY + leadHeight / 2;
 
-            // Lead Identifier Label
-            ctx.fillStyle = "#94a3b8";
-            ctx.font = "bold 11px JetBrains Mono";
-            ctx.fillText(LEAD_NAMES[l], 10, baseY - 6);
-
-            // Isoelectric Baseline
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
-            ctx.lineWidth = 1;
+            // Subplot horizontal divider / bottom spine
+            ctx.strokeStyle = "#e2e8f0";
+            ctx.lineWidth = 1.0;
             ctx.beginPath();
-            ctx.moveTo(42, baseY);
-            ctx.lineTo(width - 12, baseY);
+            ctx.moveTo(marginLeft, bottomY);
+            ctx.lineTo(marginLeft + plotWidth, bottomY);
             ctx.stroke();
 
-            // Real Trace Plotting
-            const numSamples = leadSignal.length;
-            const dx = (width - 55) / (numSamples - 1);
-            
-            // Dynamic scale factor for genuine ECG voltages (typically [-2mV, +2mV])
-            const scaleY = leadHeight * 0.35;
+            // Find lead peak voltage for proper dynamic scaling
+            let maxAbs = 0.25;
+            for (let s = 0; s < numSamples; s++) {
+                if (Math.abs(leadSignal[s]) > maxAbs) maxAbs = Math.abs(leadSignal[s]);
+            }
+            maxAbs = Math.max(0.3, maxAbs * 1.15);
 
+            // Isoelectric 0 mV Baseline (dotted)
+            const zeroY = midY;
+            ctx.strokeStyle = "#cbd5e1";
+            ctx.lineWidth = 0.8;
+            ctx.setLineDash([3, 4]);
+            ctx.beginPath();
+            ctx.moveTo(marginLeft, zeroY);
+            ctx.lineTo(marginLeft + plotWidth, zeroY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Lead Name (Bold on left)
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "bold 11px Inter";
+            ctx.textAlign = "right";
+            ctx.fillText(LEAD_NAMES[l], marginLeft - 26, midY + 4);
+
+            // Voltage Ticks (min, zero, max)
+            ctx.fillStyle = "#64748b";
+            ctx.font = "9px JetBrains Mono";
+            ctx.fillText(`+${maxAbs.toFixed(1)}`, marginLeft - 4, topY + 10);
+            ctx.fillText(" 0.0", marginLeft - 4, zeroY + 3);
+            ctx.fillText(`-${maxAbs.toFixed(1)}`, marginLeft - 4, bottomY - 3);
+            ctx.textAlign = "left";
+
+            // Map sample coordinates
+            const scaleY = (leadHeight * 0.42) / maxAbs;
+            const dx = plotWidth / (numSamples - 1);
+
+            // Draw ECG Trace with authentic noise and resolution
             for (let i = 0; i < numSamples - 1; i++) {
-                const x1 = 45 + i * dx;
-                const y1 = baseY - (leadSignal[i] * scaleY);
-                const x2 = 45 + (i + 1) * dx;
-                const y2 = baseY - (leadSignal[i + 1] * scaleY);
+                const x1 = marginLeft + i * dx;
+                const y1 = zeroY - (leadSignal[i] * scaleY);
+                const x2 = marginLeft + (i + 1) * dx;
+                const y2 = zeroY - (leadSignal[i + 1] * scaleY);
 
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
@@ -442,22 +469,49 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (overlayAttribution && leadAttr) {
                     const attrVal = (leadAttr[i] + leadAttr[i + 1]) / 2;
                     if (attrVal > 0.45) {
-                        ctx.strokeStyle = `rgba(244, 63, 94, ${Math.min(1.0, 0.5 + attrVal * 0.5)})`;
+                        ctx.strokeStyle = `rgba(239, 35, 60, ${Math.min(1.0, 0.7 + attrVal * 0.3)})`;
                         ctx.lineWidth = 2.4;
                     } else if (attrVal > 0.22) {
-                        ctx.strokeStyle = `rgba(245, 158, 11, ${0.4 + attrVal * 0.5})`;
+                        ctx.strokeStyle = `rgba(245, 158, 11, ${0.6 + attrVal * 0.4})`;
                         ctx.lineWidth = 1.8;
                     } else {
-                        ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
+                        ctx.strokeStyle = "rgba(43, 45, 66, 0.45)";
                         ctx.lineWidth = 1.1;
                     }
                 } else {
-                    ctx.strokeStyle = "#38bdf8";
-                    ctx.lineWidth = 1.25;
+                    ctx.strokeStyle = "#2B2D42";
+                    ctx.lineWidth = 1.35;
                 }
                 ctx.stroke();
             }
         }
+
+        // Bottom X-Axis Ticks & Label
+        const bottomAxisY = marginTop + totalPlotHeight;
+        ctx.strokeStyle = "#334155";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(marginLeft, bottomAxisY);
+        ctx.lineTo(marginLeft + plotWidth, bottomAxisY);
+        ctx.stroke();
+
+        const xTicks = [0, 200, 400, 600, 800, 1000];
+        ctx.fillStyle = "#334155";
+        ctx.font = "bold 9px JetBrains Mono";
+        xTicks.forEach(tick => {
+            const x = marginLeft + (tick / 1000) * plotWidth;
+            ctx.beginPath();
+            ctx.moveTo(x, bottomAxisY);
+            ctx.lineTo(x, bottomAxisY + 5);
+            ctx.stroke();
+            ctx.textAlign = "center";
+            ctx.fillText(tick.toString(), x, bottomAxisY + 16);
+        });
+
+        // X-Axis Title
+        ctx.font = "bold 10px Inter";
+        ctx.fillText("Time steps (Samples)", marginLeft + plotWidth / 2, bottomAxisY + 32);
+        ctx.textAlign = "left";
     }
 
     function renderGradCAMGrid(gradcams) {
@@ -510,34 +564,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function drawTranslatedWaveform(canvas, signals, boxes) {
         if (!canvas || !signals) return;
-        draw12LeadWaveforms(canvas, signals, false);
+        draw12LeadWaveforms(canvas, signals, false, [], "Lead-Specific ECG Grad-CAM Attribution & Landmark Mapping");
 
         const ctx = canvas.getContext("2d");
         const rect = canvas.getBoundingClientRect();
         const width = rect.width;
-        const height = 580;
-        const leadHeight = height / 12;
+        const displayHeight = 980;
+        const marginTop = 35;
+        const marginBottom = 45;
+        const marginLeft = 65;
+        const marginRight = 30;
+        const plotWidth = width - marginLeft - marginRight;
+        const totalPlotHeight = displayHeight - marginTop - marginBottom;
+        const leadHeight = totalPlotHeight / 12;
         const numSamples = signals[0].length;
-        const dx = (width - 55) / (numSamples - 1);
+        const dx = plotWidth / (numSamples - 1);
 
         (boxes || []).forEach(box => {
             const l = box.lead || 1;
-            const baseY = l * leadHeight + leadHeight / 2;
-            const startX = 45 + box.start * dx;
-            const endX = 45 + box.end * dx;
-            const boxWidth = Math.max(14, endX - startX);
+            const topY = marginTop + l * leadHeight;
+            const bottomY = topY + leadHeight;
+            const startX = marginLeft + box.start * dx;
+            const endX = marginLeft + box.end * dx;
+            const boxWidth = Math.max(16, endX - startX);
 
-            // Bounding box
-            ctx.fillStyle = "rgba(244, 63, 94, 0.16)";
-            ctx.strokeStyle = "#f43f5e";
-            ctx.lineWidth = 1.3;
-            ctx.fillRect(startX, baseY - leadHeight * 0.44, boxWidth, leadHeight * 0.88);
-            ctx.strokeRect(startX, baseY - leadHeight * 0.44, boxWidth, leadHeight * 0.88);
+            // Coral Highlight Span
+            ctx.fillStyle = "rgba(239, 35, 60, 0.16)";
+            ctx.fillRect(startX, topY + 4, boxWidth, leadHeight - 8);
 
-            // Tag
+            // Dashed boundary lines
+            ctx.strokeStyle = "#EF233C";
+            ctx.lineWidth = 1.0;
+            ctx.setLineDash([4, 3]);
+            ctx.beginPath();
+            ctx.moveTo(startX, topY + 4);
+            ctx.lineTo(startX, bottomY - 4);
+            ctx.moveTo(endX, topY + 4);
+            ctx.lineTo(endX, bottomY - 4);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Label pill badge
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 9px Inter";
-            ctx.fillText(`${box.label} (${box.attr_score})`, startX + 2, baseY - leadHeight * 0.3);
+            ctx.fillRect(startX + 4, topY + 8, Math.min(130, boxWidth + 40), 16);
+            ctx.strokeStyle = "#EF233C";
+            ctx.strokeRect(startX + 4, topY + 8, Math.min(130, boxWidth + 40), 16);
+
+            ctx.fillStyle = "#D90429";
+            ctx.font = "bold 8.5px Inter";
+            ctx.fillText(`${box.label} (Attr: ${box.attr_score})`, startX + 7, topY + 20);
         });
     }
 
