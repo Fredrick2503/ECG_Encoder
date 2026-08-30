@@ -73,19 +73,14 @@ class ECGWebAppHandler(BaseHTTPRequestHandler):
             
         elif path.startswith("/api/sample/"):
             sample_id = path.replace("/api/sample/", "").strip()
-            samples = sample_manager.get_preset_samples()
-            match = next((s for s in samples if s["id"] == sample_id), None)
-            if match is None:
-                match = samples[0] # Default fallback
-                sample_id = match["id"]
-                
-            signal, biomarkers = sample_manager.generate_signal_for_sample(sample_id)
+            payload = sample_manager.generate_full_sample_payload(sample_id)
             self._send_json({
                 "status": "success",
-                "sample": match,
-                "leads": LEAD_NAMES,
-                "signal": signal.tolist(), # (12, 1000)
-                "biomarkers": biomarkers
+                "payload": payload,
+                "sample": payload.get("record", {}),
+                "leads": payload.get("leads", LEAD_NAMES),
+                "signal": payload.get("signal", []),
+                "biomarkers": payload.get("biomarkers", {})
             })
             return
 

@@ -87,6 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         window.addEventListener("resize", () => {
             if (plotlyContainer && window.Plotly) Plotly.Plots.resize(plotlyContainer);
+            if (currentRecordId) selectRecord(currentRecordId);
         });
     }
 
@@ -242,7 +243,6 @@ document.addEventListener("DOMContentLoaded", () => {
     async function selectRecord(recordId) {
         currentRecordId = recordId;
 
-        // Highlight in Catalog Table
         if (recordsTableBody) {
             document.querySelectorAll("#recordsTableBody tr").forEach(row => row.classList.remove("active-row"));
             const activeTr = Array.from(recordsTableBody.querySelectorAll("tr")).find(tr => tr.innerHTML.includes(recordId));
@@ -253,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
             sampleSelectHeader.value = recordId;
         }
 
-        // Re-render 3D plot to update diamond marker
         if (plotlyContainer) {
             renderPlotly3D();
         }
@@ -325,21 +324,23 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!canvas || !signals || signals.length < 12) return;
         const ctx = canvas.getContext("2d");
         const rect = canvas.getBoundingClientRect();
+        const displayHeight = 580;
+        
         canvas.width = rect.width * window.devicePixelRatio;
-        canvas.height = 480 * window.devicePixelRatio;
+        canvas.height = displayHeight * window.devicePixelRatio;
         ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
         const width = rect.width;
-        const height = 480;
+        const height = displayHeight;
 
-        // Background
+        // Clean Dark Background
         ctx.fillStyle = "#070d19";
         ctx.fillRect(0, 0, width, height);
 
-        // Medical Grid Lines
-        ctx.strokeStyle = "rgba(6, 182, 212, 0.08)";
-        ctx.lineWidth = 1;
-        for (let x = 0; x < width; x += 20) {
+        // Subtle Medical Telemetry Grid
+        ctx.strokeStyle = "rgba(6, 182, 212, 0.07)";
+        ctx.lineWidth = 0.8;
+        for (let x = 0; x < width; x += 25) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
             ctx.lineTo(x, height);
@@ -359,27 +360,31 @@ document.addEventListener("DOMContentLoaded", () => {
             const leadAttr = (overlayAttribution && attributions[l]) ? attributions[l] : null;
             const baseY = l * leadHeight + leadHeight / 2;
 
-            // Lead Name
+            // Lead Identifier Label
             ctx.fillStyle = "#94a3b8";
-            ctx.font = "bold 10px JetBrains Mono";
-            ctx.fillText(LEAD_NAMES[l], 8, baseY - 6);
+            ctx.font = "bold 11px JetBrains Mono";
+            ctx.fillText(LEAD_NAMES[l], 10, baseY - 6);
 
-            // Lead Baseline
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+            // Isoelectric Baseline
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(35, baseY);
-            ctx.lineTo(width - 10, baseY);
+            ctx.moveTo(42, baseY);
+            ctx.lineTo(width - 12, baseY);
             ctx.stroke();
 
-            // Trace
+            // Real Trace Plotting
             const numSamples = leadSignal.length;
-            const dx = (width - 45) / (numSamples - 1);
+            const dx = (width - 55) / (numSamples - 1);
+            
+            // Dynamic scale factor for genuine ECG voltages (typically [-2mV, +2mV])
+            const scaleY = leadHeight * 0.35;
 
             for (let i = 0; i < numSamples - 1; i++) {
-                const x1 = 35 + i * dx;
-                const y1 = baseY - leadSignal[i] * (leadHeight * 0.38);
-                const x2 = 35 + (i + 1) * dx;
-                const y2 = baseY - leadSignal[i + 1] * (leadHeight * 0.38);
+                const x1 = 45 + i * dx;
+                const y1 = baseY - (leadSignal[i] * scaleY);
+                const x2 = 45 + (i + 1) * dx;
+                const y2 = baseY - (leadSignal[i + 1] * scaleY);
 
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
@@ -388,18 +393,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (overlayAttribution && leadAttr) {
                     const attrVal = (leadAttr[i] + leadAttr[i + 1]) / 2;
                     if (attrVal > 0.45) {
-                        ctx.strokeStyle = `rgba(244, 63, 94, ${Math.min(1.0, 0.4 + attrVal * 0.6)})`;
+                        ctx.strokeStyle = `rgba(244, 63, 94, ${Math.min(1.0, 0.5 + attrVal * 0.5)})`;
                         ctx.lineWidth = 2.4;
-                    } else if (attrVal > 0.25) {
-                        ctx.strokeStyle = `rgba(245, 158, 11, ${0.3 + attrVal * 0.5})`;
+                    } else if (attrVal > 0.22) {
+                        ctx.strokeStyle = `rgba(245, 158, 11, ${0.4 + attrVal * 0.5})`;
                         ctx.lineWidth = 1.8;
                     } else {
-                        ctx.strokeStyle = "rgba(148, 163, 184, 0.5)";
-                        ctx.lineWidth = 1.2;
+                        ctx.strokeStyle = "rgba(148, 163, 184, 0.45)";
+                        ctx.lineWidth = 1.1;
                     }
                 } else {
                     ctx.strokeStyle = "#38bdf8";
-                    ctx.lineWidth = 1.3;
+                    ctx.lineWidth = 1.25;
                 }
                 ctx.stroke();
             }
@@ -444,7 +449,6 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 const v = matrix[r][c];
-                // Turbo colormap approximation
                 const red = Math.min(255, Math.floor(v * 320));
                 const green = Math.min(255, Math.floor((1 - Math.abs(v - 0.5) * 2) * 255));
                 const blue = Math.min(255, Math.floor((1 - v) * 255));
@@ -462,24 +466,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const ctx = canvas.getContext("2d");
         const rect = canvas.getBoundingClientRect();
         const width = rect.width;
-        const height = 480;
+        const height = 580;
         const leadHeight = height / 12;
         const numSamples = signals[0].length;
-        const dx = (width - 45) / (numSamples - 1);
+        const dx = (width - 55) / (numSamples - 1);
 
         (boxes || []).forEach(box => {
             const l = box.lead || 1;
             const baseY = l * leadHeight + leadHeight / 2;
-            const startX = 35 + box.start * dx;
-            const endX = 35 + box.end * dx;
-            const boxWidth = Math.max(12, endX - startX);
+            const startX = 45 + box.start * dx;
+            const endX = 45 + box.end * dx;
+            const boxWidth = Math.max(14, endX - startX);
 
             // Bounding box
-            ctx.fillStyle = "rgba(244, 63, 94, 0.18)";
+            ctx.fillStyle = "rgba(244, 63, 94, 0.16)";
             ctx.strokeStyle = "#f43f5e";
-            ctx.lineWidth = 1.4;
-            ctx.fillRect(startX, baseY - leadHeight * 0.45, boxWidth, leadHeight * 0.9);
-            ctx.strokeRect(startX, baseY - leadHeight * 0.45, boxWidth, leadHeight * 0.9);
+            ctx.lineWidth = 1.3;
+            ctx.fillRect(startX, baseY - leadHeight * 0.44, boxWidth, leadHeight * 0.88);
+            ctx.strokeRect(startX, baseY - leadHeight * 0.44, boxWidth, leadHeight * 0.88);
 
             // Tag
             ctx.fillStyle = "#ffffff";
