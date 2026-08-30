@@ -39,7 +39,7 @@ class SHAPExplainerWrapper:
         # 3. Scale using the pre-trained scaler
         X_scaled = self.scaler.transform(X_imputed)
         
-        # 4. Concatenate scaled features and mask (48 dimensions)
+        # 4. Concatenate scaled features and mask (50 dimensions)
         X_combined = np.hstack([X_scaled, M])
         
         # 5. Get encoder embeddings (32 dimensions)
