@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Foundation Representation System — Clinical & Research AI Cockpit</title>
-    <meta name="description" content="Interactive Multimodal 12-Lead ECG Foundation Representation System with Gemini LLM Clinical & Electrophysiological Interpretation.">
+    <title>ECG Multimodal Representation System — Intelligence Cockpit</title>
+    <meta name="description" content="Interactive 12-lead ECG foundation representation cockpit with 3D latent clustering, 12-lead attributions, and Gemini AI synthesis.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Chart.js & Marked.js for Markdown -->
+    <!-- Plotly.js, Chart.js, Marked.js -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Background Ambient Glow -->
     <div class="glow-orb orb-1"></div>
     <div class="glow-orb orb-2"></div>
 
@@ -25,192 +25,213 @@
         <div class="header-left">
             <div class="logo-badge">
                 <span class="pulse-dot"></span>
-                <span class="logo-title">ECG FOUNDATION ENGINE</span>
+                <span class="logo-title">ECG MULTIMODAL FOUNDATION SYSTEM</span>
             </div>
-            <span class="badge-version">v2.4 Multimodal (1056-D)</span>
+            <span class="badge-version">PTB-XL 2.6k Latent Manifold</span>
             <span class="badge-llm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                Gemini 2.5 AI Active
+                Gemini 2.5 AI Consultation
             </span>
         </div>
         <div class="header-right">
-            <div class="case-selector-wrapper">
-                <label for="sampleSelect">Select Clinical Record:</label>
-                <select id="sampleSelect" class="styled-select" aria-label="Select Clinical Record">
-                    <option value="" disabled selected>Loading records...</option>
-                </select>
-            </div>
-            <button id="btnAnalyze" class="btn-primary" aria-label="Run Multimodal AI Analysis">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                <span>Run Full Analysis</span>
+            <a href="report_comprehensive_backup.html" target="_blank" class="btn-secondary" title="View Static Comprehensive 10-Sample Report Backup">
+                <span>View Static Report Backup ↗</span>
+            </a>
+            <button id="btnScrollToRecord" class="btn-primary">
+                <span>Active Record Deep Dive ↓</span>
             </button>
         </div>
     </header>
 
-    <!-- Main Workspace Layout -->
     <main class="dashboard-grid">
         
-        <!-- ROW 1: Patient Header & Diagnostic Superclass Predictions -->
-        <section class="card patient-card">
+        <!-- SECTION 1: 3D Latent Space Clustering & Cohort Records Catalog -->
+        <section class="card full-width" id="sectionClustering">
             <div class="card-header">
                 <div class="card-title-group">
-                    <span class="card-icon">🫀</span>
-                    <h2>Case Profile & Ground Truth</h2>
+                    <span class="card-icon">🌐</span>
+                    <h2>3D Latent Space Clustering (Learned Fusion Space • 600 Frozen PTB-XL Records)</h2>
                 </div>
-                <div class="tag-status" id="patientCategoryBadge">NORMAL</div>
+                <span class="latent-pill">z_fused ∈ ℝ¹⁰⁵⁶ → PCA 3D Manifold</span>
             </div>
-            <div class="patient-details-grid">
-                <div class="meta-item">
-                    <span class="meta-label">Record ID</span>
-                    <span class="meta-val" id="valRecordId">CASE-NORM-01</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Age / Sex</span>
-                    <span class="meta-val" id="valAgeSex">34 / Female</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Est. Heart Rate</span>
-                    <span class="meta-val highlight-val" id="valHeartRate">72 bpm</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Ground Truth</span>
-                    <span class="meta-val text-success" id="valGroundTruth">NORM</span>
-                </div>
-            </div>
-            <p class="clinical-history-text" id="valHistory">Routine pre-employment screening. Asymptomatic with normal physical examination.</p>
-        </section>
+            <p class="section-subtitle">
+                Interactive 3D manifold projection of multimodal embeddings extracted from the frozen Temporal (ResNet-1D), Morphology (Spectrogram ResNet-2D), and Biomarker encoders. Rotate, pan, zoom, or click on any point to load and inspect that patient's full 12-lead record.
+            </p>
 
-        <!-- Diagnostic Prediction Panel -->
-        <section class="card prediction-card">
-            <div class="card-header">
-                <div class="card-title-group">
-                    <span class="card-icon">⚡</span>
-                    <h2>Multi-Label Diagnostic Classification (Calibrated F1 Thresholds)</h2>
+            <div class="clustering-catalog-split">
+                <!-- 3D Plotly Manifold -->
+                <div class="plotly-container-box">
+                    <div id="plotly3DCluster" class="plotly-chart"></div>
                 </div>
-                <span class="latent-pill">Joint Latent: z_fused ∈ ℝ¹⁰⁵⁶</span>
-            </div>
-            <div class="probability-bars-container" id="probBarsContainer">
-                <!-- Injected via JS -->
-            </div>
-        </section>
 
-        <!-- ROW 2: Interactive 12-Lead Waveform Canvas -->
-        <section class="card ecg-canvas-card full-width">
-            <div class="card-header">
-                <div class="card-title-group">
-                    <span class="card-icon">📈</span>
-                    <h2>12-Lead Standard Clinical ECG (25 mm/s, 10 mm/mV)</h2>
-                </div>
-                <div class="canvas-controls">
-                    <div class="btn-group" role="group">
-                        <button class="btn-toggle active" id="btnGrid12" data-mode="12">12-Lead Standard (3×4)</button>
-                        <button class="btn-toggle" id="btnGridLeadII" data-mode="lead2">Rhythm Strip (Lead II)</button>
+                <!-- Records Catalog Filter & Table -->
+                <div class="records-catalog-box">
+                    <div class="catalog-controls">
+                        <input type="text" id="recordSearchInput" class="search-input" placeholder="Search by Record ID, Diagnosis, Age...">
+                        <div class="filter-pills" id="categoryFilterPills">
+                            <button class="pill active" data-cat="ALL">ALL (600)</button>
+                            <button class="pill pill-norm" data-cat="NORM">NORM</button>
+                            <button class="pill pill-mi" data-cat="MI">MI</button>
+                            <button class="pill pill-sttc" data-cat="STTC">STTC</button>
+                            <button class="pill pill-cd" data-cat="CD">CD</button>
+                            <button class="pill pill-hyp" data-cat="HYP">HYP</button>
+                        </div>
+                    </div>
+                    <div class="records-table-scroll">
+                        <table class="styled-table records-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Patient</th>
+                                    <th>Superclass</th>
+                                    <th>History / Diagnosis</th>
+                                    <th>HR</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recordsTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-            <div class="canvas-container">
-                <canvas id="ecgCanvas"></canvas>
-            </div>
-            <div class="canvas-footer-legend">
-                <span><span class="legend-dot dot-cyan"></span> Voltage Scale: 0.1 mV / div</span>
-                <span><span class="legend-dot dot-orange"></span> Time Scale: 40 ms / div (Small Box)</span>
-                <span><span class="legend-dot dot-green"></span> Sampling Rate: 100 Hz</span>
-            </div>
         </section>
 
-        <!-- ROW 3: Multimodal Explainability (Temporal & Morphology) -->
-        <section class="card explain-card">
+        <!-- SECTION 2: Active Selected Record Deep Dive -->
+        <section class="card full-width sample-detail-card" id="activeRecordSection">
             <div class="card-header">
                 <div class="card-title-group">
-                    <span class="card-icon">⏱️</span>
-                    <h2>Temporal Encoder (1D ResNet-SE • 512-D)</h2>
+                    <span class="card-icon">🫀</span>
+                    <h2 id="activeRecordTitle">Patient Case — ECG Record #1001</h2>
                 </div>
-                <span class="latent-pill">Saliency & Attention</span>
+                <div class="header-badges">
+                    <div class="patient-tag tag-mi" id="activeRecordTag">DIAGNOSTIC CLASS: MI</div>
+                    <span class="patient-meta" id="activeRecordMeta">64yo Male • Heart Rate: 88 bpm</span>
+                </div>
             </div>
-            <p class="explain-desc">Gradient attention highlights demonstrating key temporal activation triggers (QRS onset & T-wave repolarization):</p>
-            <div class="temporal-chart-wrapper">
-                <canvas id="saliencyCanvas" height="130"></canvas>
+
+            <!-- Model Confidence Levels Table -->
+            <h4 class="report-section-label">MODEL CONFIDENCE LEVELS (TEMPORAL • MORPHOLOGY • FUSION JOINT)</h4>
+            <div class="confidence-table-wrapper">
+                <table class="styled-table confidence-table">
+                    <thead>
+                        <tr>
+                            <th>Sub-Model Head</th>
+                            <th>NORM</th>
+                            <th>MI</th>
+                            <th>STTC</th>
+                            <th>CD</th>
+                            <th>HYP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="confidenceTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
             </div>
-            <div class="embedding-telemetry" id="temporalEmbedTelemetry">
-                <span class="telemetry-label">Embedding Vector (z_t preview):</span>
-                <code class="telemetry-code" id="codeTemporal">Loading...</code>
+
+            <!-- 12-Lead Full ECG Waveform (Raw) Canvas -->
+            <div class="waveform-block">
+                <div class="block-header">
+                    <h4 class="figure-title">1. Full 12-Lead ECG Waveform (Raw Signal):</h4>
+                    <span class="block-badge">10s Standard Telemetry • 100 Hz</span>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="rawEcgCanvas" class="ecg-canvas"></canvas>
+                </div>
             </div>
+
+            <!-- Temporal Attribution Diagram (Integrated Gradients) -->
+            <div class="waveform-block">
+                <div class="block-header">
+                    <h4 class="figure-title">2. Temporal Attribution Diagram (1D Integrated Gradients Overlay):</h4>
+                    <span class="block-badge">Gradient Attribution Focused Intervals</span>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="temporalAttrCanvas" class="ecg-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Morphology 2D Attribution Diagram (Grad-CAM Spectrogram Heatmaps) -->
+            <div class="waveform-block">
+                <div class="block-header">
+                    <h4 class="figure-title">3. Morphology 2D Attribution Diagram (12-Lead Time-Frequency Grad-CAM):</h4>
+                    <span class="block-badge">Layer4 Conv2 Activation Maps</span>
+                </div>
+                <div class="gradcam-grid" id="gradcamGrid">
+                    <!-- 12 Lead heatmaps rendered by JS -->
+                </div>
+            </div>
+
+            <!-- Morphology Translated Waveform Visualization -->
+            <div class="waveform-block">
+                <div class="block-header">
+                    <h4 class="figure-title">4. Morphology Translated Waveform Visualization (Landmark Bounding Boxes):</h4>
+                    <span class="block-badge">Wave Bounding Intervals & Scores</span>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="translatedWaveformCanvas" class="ecg-canvas"></canvas>
+                </div>
+            </div>
+
         </section>
 
-        <section class="card explain-card">
-            <div class="card-header">
-                <div class="card-title-group">
-                    <span class="card-icon">🌊</span>
-                    <h2>Morphology Encoder (2D Spectrogram • 512-D)</h2>
-                </div>
-                <span class="latent-pill">Time-Frequency Latent</span>
-            </div>
-            <p class="explain-desc">Spectral power density (0–50 Hz) capturing spatial waveform contour distortions:</p>
-            <div class="spectrogram-container">
-                <canvas id="spectrogramCanvas" height="130"></canvas>
-            </div>
-            <div class="embedding-telemetry" id="morphologyEmbedTelemetry">
-                <span class="telemetry-label">Embedding Vector (z_m preview):</span>
-                <code class="telemetry-code" id="codeMorphology">Loading...</code>
-            </div>
-        </section>
-
-        <!-- ROW 4: Biomarkers & Quantitative Electrophysiology -->
-        <section class="card biomarker-card">
+        <!-- SECTION 3: Clinical Biomarkers Radar & Table -->
+        <section class="card full-width biomarker-card">
             <div class="card-header">
                 <div class="card-title-group">
                     <span class="card-icon">🔬</span>
-                    <h2>Clinical Biomarkers & HRV Profile (Attention MLP • 32-D)</h2>
+                    <h2>Clinical Biomarkers & HRV Profile (Attention MLP • 32-D Representation)</h2>
                 </div>
-                <span class="latent-pill">Missingness-Masked</span>
+                <span class="latent-pill">Extracted from 17 Diagnostic Intervals</span>
             </div>
-            <div class="biomarker-content-grid">
-                <div class="radar-chart-container">
+            <div class="biomarker-split-grid">
+                <div class="radar-box">
                     <canvas id="biomarkerRadarChart"></canvas>
                 </div>
-                <div class="biomarker-table-container">
+                <div class="biomarker-table-box">
                     <table class="styled-table">
                         <thead>
                             <tr>
-                                <th>Clinical Biomarker</th>
-                                <th>Measured</th>
-                                <th>Ref. Interval</th>
-                                <th>Evaluation</th>
+                                <th>Clinical Metric</th>
+                                <th>Measured Value</th>
+                                <th>Standard Reference Limit</th>
+                                <th>Clinical Evaluation</th>
                             </tr>
                         </thead>
                         <tbody id="biomarkerTableBody">
-                            <!-- Injected via JS -->
+                            <!-- Populated via JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- ROW 5: Gemini LLM Clinical & Research Intelligence Report -->
-        <section class="card llm-report-card">
+        <!-- SECTION 4: Gemini AI Consultation & Research Interpretation -->
+        <section class="card full-width llm-card">
             <div class="card-header">
                 <div class="card-title-group">
                     <span class="card-icon">🤖</span>
-                    <h2>Gemini AI — Clinical Consultation & Research Interpretation</h2>
+                    <h2>Gemini AI — Clinical Consultation & Electrophysiological Interpretation</h2>
                 </div>
-                <button id="btnRegenLLM" class="btn-secondary" aria-label="Regenerate Clinical Synthesis">
+                <button id="btnRegenLLM" class="btn-secondary">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
                     <span>Regenerate Synthesis</span>
                 </button>
             </div>
-            <div class="llm-report-body" id="llmReportContent">
+            <div class="llm-report-content" id="llmReportContent">
                 <div class="llm-loading-state">
                     <span class="spinner"></span>
-                    <p>Generating expert cardiological synthesis from multimodal representations via Gemini API...</p>
+                    <p>Synthesizing deep cardiological report from multimodal representations via Gemini API...</p>
                 </div>
             </div>
         </section>
 
     </main>
 
-    <!-- Footer -->
     <footer class="app-footer">
-        <p>ECG Foundation Representation System • Multimodal Deep Learning (Temporal ResNet-SE + Morphology 2D ResNet + Biomarker Attention MLP) • Powered by Gemini AI</p>
+        <p>ECG Multimodal Representation System • PTB-XL Foundation Model Intelligence Cockpit • Powered by Gemini AI</p>
     </footer>
 
     <script src="app.js"></script>

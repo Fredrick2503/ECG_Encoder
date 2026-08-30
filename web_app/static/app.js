@@ -1,540 +1,638 @@
 /**
- * ECG Foundation Representation System — Frontend Controller
+ * ECG Multimodal Representation Cockpit — Interactive Frontend Controller
  */
 
 document.addEventListener("DOMContentLoaded", () => {
-    // State
-    let currentSample = null;
-    let currentSignal = null;
-    let currentBiomarkers = null;
-    let currentAnalysis = null;
-    let currentLeads = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"];
-    let canvasMode = "12"; // "12" or "lead2"
+    let allRecords = [];
+    let currentRecordId = "REC-1";
+    let activeCategoryFilter = "ALL";
     let radarChart = null;
+    let embeddings3DData = null;
 
     // DOM Elements
-    const sampleSelect = document.getElementById("sampleSelect");
-    const btnAnalyze = document.getElementById("btnAnalyze");
+    const plotlyContainer = document.getElementById("plotly3DCluster");
+    const recordsTableBody = document.getElementById("recordsTableBody");
+    const recordSearchInput = document.getElementById("recordSearchInput");
+    const categoryFilterPills = document.getElementById("categoryFilterPills");
+    const btnScrollToRecord = document.getElementById("btnScrollToRecord");
     const btnRegenLLM = document.getElementById("btnRegenLLM");
-    const btnGrid12 = document.getElementById("btnGrid12");
-    const btnGridLeadII = document.getElementById("btnGridLeadII");
-    const ecgCanvas = document.getElementById("ecgCanvas");
-    const saliencyCanvas = document.getElementById("saliencyCanvas");
-    const spectrogramCanvas = document.getElementById("spectrogramCanvas");
+    const sampleSelectHeader = document.getElementById("sampleSelectHeader");
 
-    // Initialize App
+    const activeRecordTitle = document.getElementById("activeRecordTitle");
+    const activeRecordTag = document.getElementById("activeRecordTag");
+    const activeRecordMeta = document.getElementById("activeRecordMeta");
+    const confidenceTableBody = document.getElementById("confidenceTableBody");
+    const llmReportContent = document.getElementById("llmReportContent");
+    const biomarkerTableBody = document.getElementById("biomarkerTableBody");
+    const gradcamGrid = document.getElementById("gradcamGrid");
+
+    const rawEcgCanvas = document.getElementById("rawEcgCanvas");
+    const temporalAttrCanvas = document.getElementById("temporalAttrCanvas");
+    const translatedWaveformCanvas = document.getElementById("translatedWaveformCanvas");
+
+    const LEAD_NAMES = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"];
+
+    // Initialize Cockpit
     init();
 
     async function init() {
         setupEventListeners();
-        await loadSamples();
+        if (plotlyContainer) {
+            await load3DCluster();
+        }
+        if (recordsTableBody || sampleSelectHeader) {
+            await loadRecordsCatalog();
+        }
+        if (allRecords.length > 0) {
+            selectRecord(allRecords[0].id);
+        }
     }
 
     function setupEventListeners() {
-        sampleSelect.addEventListener("change", (e) => {
-            loadSampleData(e.target.value);
-        });
+        if (recordSearchInput) {
+            recordSearchInput.addEventListener("input", filterAndRenderTable);
+        }
 
-        btnAnalyze.addEventListener("click", () => {
-            if (currentSignal) {
-                runFullAnalysis();
-            }
-        });
+        if (categoryFilterPills) {
+            categoryFilterPills.addEventListener("click", (e) => {
+                if (e.target.classList.contains("pill")) {
+                    document.querySelectorAll("#categoryFilterPills .pill").forEach(p => p.classList.remove("active"));
+                    e.target.classList.add("active");
+                    activeCategoryFilter = e.target.getAttribute("data-cat");
+                    filterAndRenderTable();
+                }
+            });
+        }
 
-        btnRegenLLM.addEventListener("click", () => {
-            if (currentAnalysis) {
-                generateLLMInterpretation();
-            }
-        });
+        if (sampleSelectHeader) {
+            sampleSelectHeader.addEventListener("change", (e) => {
+                selectRecord(e.target.value);
+            });
+        }
 
-        btnGrid12.addEventListener("click", () => {
-            canvasMode = "12";
-            btnGrid12.classList.add("active");
-            btnGridLeadII.classList.remove("active");
-            renderECGCanvas();
-        });
+        if (btnScrollToRecord) {
+            btnScrollToRecord.addEventListener("click", () => {
+                const section = document.getElementById("activeRecordSection") || document.getElementById("sampleDetailCard");
+                if (section) section.scrollIntoView({ behavior: 'smooth' });
+            });
+        }
 
-        btnGridLeadII.addEventListener("click", () => {
-            canvasMode = "lead2";
-            btnGridLeadII.classList.add("active");
-            btnGrid12.classList.remove("active");
-            renderECGCanvas();
-        });
+        if (btnRegenLLM) {
+            btnRegenLLM.addEventListener("click", () => {
+                if (currentRecordId) {
+                    generateLLMInterpretation(currentRecordId);
+                }
+            });
+        }
 
         window.addEventListener("resize", () => {
-            renderECGCanvas();
-            if (currentAnalysis) {
-                renderTemporalSaliency(currentAnalysis.visualizations.saliency_lead_ii);
-                renderSpectrogram(currentAnalysis.visualizations.spectrogram_lead_ii);
-            }
+            if (plotlyContainer && window.Plotly) Plotly.Plots.resize(plotlyContainer);
         });
     }
 
-    async function loadSamples() {
+    async function load3DCluster() {
         try {
-            const res = await fetch("/api/samples");
-            const data = await res.json();
-            if (data.status === "success" && data.samples.length > 0) {
-                sampleSelect.innerHTML = "";
-                data.samples.forEach(sample => {
-                    const opt = document.createElement("option");
-                    opt.value = sample.id;
-                    opt.textContent = `[${sample.category}] ${sample.name}`;
-                    sampleSelect.appendChild(opt);
-                });
-                // Load initial sample
-                loadSampleData(data.samples[0].id);
-            }
+            const res = await fetch("/api/embeddings_3d");
+            embeddings3DData = await res.json();
+            renderPlotly3D();
         } catch (err) {
-            console.error("Failed to fetch samples:", err);
+            console.error("Failed to load 3D embeddings:", err);
         }
     }
 
-    async function loadSampleData(sampleId) {
-        try {
-            const res = await fetch(`/api/sample/${sampleId}`);
-            const data = await res.json();
-            if (data.status === "success") {
-                currentSample = data.sample;
-                currentSignal = data.signal;
-                currentBiomarkers = data.biomarkers;
-                currentLeads = data.leads;
+    function renderPlotly3D() {
+        if (!plotlyContainer || !window.Plotly || !embeddings3DData || !embeddings3DData.population_points) return;
 
-                updatePatientProfile(currentSample, currentBiomarkers);
-                renderECGCanvas();
-                renderBiomarkers(currentBiomarkers);
-                
-                // Automatically run analysis on selection
-                runFullAnalysis();
-            }
-        } catch (err) {
-            console.error("Failed to load sample data:", err);
-        }
-    }
-
-    function updatePatientProfile(sample, bio) {
-        document.getElementById("valRecordId").textContent = sample.id;
-        document.getElementById("valAgeSex").textContent = `${sample.age} / ${sample.sex}`;
-        document.getElementById("valHeartRate").textContent = `${sample.heart_rate} bpm`;
-        document.getElementById("valGroundTruth").textContent = sample.ground_truth.join(", ");
-        document.getElementById("valHistory").textContent = sample.clinical_history;
-
-        const badge = document.getElementById("patientCategoryBadge");
-        badge.textContent = sample.category;
-        if (sample.category === "NORM") {
-            badge.className = "tag-status text-success";
-        } else {
-            badge.className = "tag-status text-danger";
-        }
-    }
-
-    async function runFullAnalysis() {
-        btnAnalyze.disabled = true;
-        btnAnalyze.innerHTML = `<span>Analyzing...</span>`;
-
-        try {
-            const res = await fetch("/api/analyze", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    signal: currentSignal,
-                    biomarkers: currentBiomarkers
-                })
-            });
-
-            const data = await res.json();
-            if (data.status === "success") {
-                currentAnalysis = data;
-                renderPredictions(data.predictions);
-                renderTemporalSaliency(data.visualizations.saliency_lead_ii);
-                renderSpectrogram(data.visualizations.spectrogram_lead_ii);
-                renderTelemetry(data.representations);
-
-                // Trigger Gemini LLM Interpretation
-                generateLLMInterpretation();
-            }
-        } catch (err) {
-            console.error("Analysis execution failed:", err);
-        } finally {
-            btnAnalyze.disabled = false;
-            btnAnalyze.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                <span>Run Full Analysis</span>
-            `;
-        }
-    }
-
-    function renderPredictions(predictions) {
-        const container = document.getElementById("probBarsContainer");
-        container.innerHTML = "";
-
-        const classLabels = {
-            "NORM": "Normal Rhythm",
-            "MI": "Myocardial Infarct",
-            "STTC": "ST/T Abnormality",
-            "CD": "Conduction Delay",
-            "HYP": "Hypertrophy"
+        const points = embeddings3DData.population_points;
+        const categories = ["NORM", "MI", "STTC", "CD", "HYP"];
+        const colorMap = {
+            NORM: "#10b981",
+            MI: "#f43f5e",
+            STTC: "#f59e0b",
+            CD: "#a855f7",
+            HYP: "#3b82f6"
         };
 
-        for (const [cname, prob] of Object.entries(predictions.probabilities)) {
-            const thresh = predictions.thresholds[cname] || 0.5;
-            const isDetected = predictions.binary_decisions[cname] === 1;
-            const pct = Math.round(prob * 100);
-            const threshPct = Math.round(thresh * 100);
+        const traces = [];
 
-            const card = document.createElement("div");
-            card.className = `prob-metric-item ${isDetected ? 'detected' : ''}`;
-            card.innerHTML = `
-                <div class="prob-class-name">
-                    <span>${cname}</span>
-                    <span style="font-size:0.75rem; color: ${isDetected ? 'var(--rose)' : 'var(--emerald)'};">
-                        ${isDetected ? 'POSITIVE' : 'NEGATIVE'}
-                    </span>
-                </div>
-                <div class="prob-val-percent">${pct}%</div>
-                <div class="prob-bar-track">
-                    <div class="prob-bar-fill" style="width: ${pct}%;"></div>
-                </div>
-                <div class="prob-threshold-note">Thresh: ${threshPct}% • ${classLabels[cname] || ''}</div>
-            `;
-            container.appendChild(card);
-        }
-    }
-
-    /* ─── 12-Lead ECG Canvas Renderer ─── */
-    function renderECGCanvas() {
-        if (!currentSignal) return;
-
-        const dpr = window.devicePixelRatio || 1;
-        const rect = ecgCanvas.getBoundingClientRect();
-        ecgCanvas.width = rect.width * dpr;
-        ecgCanvas.height = rect.height * dpr;
-
-        const ctx = ecgCanvas.getContext("2d");
-        ctx.scale(dpr, dpr);
-        const W = rect.width;
-        const H = rect.height;
-
-        // Draw Clinical Grid Background
-        ctx.fillStyle = "#05070d";
-        ctx.fillRect(0, 0, W, H);
-
-        const gridSizeSmall = 8;
-        const gridSizeMajor = 40;
-
-        // Minor gridlines (1mm)
-        ctx.lineWidth = 0.5;
-        ctx.strokeStyle = "rgba(244, 63, 94, 0.08)";
-        for (let x = 0; x < W; x += gridSizeSmall) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, H);
-            ctx.stroke();
-        }
-        for (let y = 0; y < H; y += gridSizeSmall) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(W, y);
-            ctx.stroke();
-        }
-
-        // Major gridlines (5mm)
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "rgba(244, 63, 94, 0.22)";
-        for (let x = 0; x < W; x += gridSizeMajor) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, H);
-            ctx.stroke();
-        }
-        for (let y = 0; y < H; y += gridSizeMajor) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(W, y);
-            ctx.stroke();
-        }
-
-        if (canvasMode === "12") {
-            // Standard 3x4 layout (3 rows, 4 columns)
-            const rows = 3;
-            const cols = 4;
-            const cellW = W / cols;
-            const cellH = H / rows;
-
-            // Standard order: Column 1: I, II, III; Column 2: aVR, aVL, aVF; Column 3: V1, V2, V3; Column 4: V4, V5, V6
-            const leadOrder = [
-                ["I", "aVR", "V1", "V4"],
-                ["II", "aVL", "V2", "V5"],
-                ["III", "aVF", "V3", "V6"]
-            ];
-
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    const leadName = leadOrder[r][c];
-                    const leadIdx = currentLeads.indexOf(leadName);
-                    if (leadIdx === -1) continue;
-
-                    const startX = c * cellW;
-                    const startY = r * cellH;
-                    const midY = startY + cellH / 2;
-
-                    // Lead Label
-                    ctx.font = "600 11px Inter, sans-serif";
-                    ctx.fillStyle = "#06b6d4";
-                    ctx.fillText(leadName, startX + 12, startY + 18);
-
-                    // Plot Signal Segment
-                    const rawLead = currentSignal[leadIdx]; // 1000 points
-                    const pointsPerCol = Math.floor(rawLead.length / cols);
-                    const slice = rawLead.slice(c * pointsPerCol, (c + 1) * pointsPerCol);
-
-                    ctx.lineWidth = 1.4;
-                    ctx.strokeStyle = "#00f2fe";
-                    ctx.beginPath();
-
-                    for (let i = 0; i < slice.length; i++) {
-                        const px = startX + (i / (slice.length - 1)) * cellW;
-                        const py = midY - slice[i] * 32; // 1mV = ~32px
-                        if (i === 0) ctx.moveTo(px, py);
-                        else ctx.lineTo(px, py);
-                    }
-                    ctx.stroke();
+        categories.forEach(cat => {
+            const catPts = points.filter(p => p.category === cat);
+            traces.push({
+                x: catPts.map(p => p.x),
+                y: catPts.map(p => p.y),
+                z: catPts.map(p => p.z),
+                text: catPts.map(p => `Record #${p.ecg_id || p.sample_code} (${p.category})`),
+                customdata: catPts.map(p => `REC-${p.ecg_id}`),
+                mode: 'markers',
+                type: 'scatter3d',
+                name: cat,
+                marker: {
+                    size: 4.5,
+                    color: colorMap[cat],
+                    opacity: 0.82
                 }
-            }
-        } else {
-            // Continuous Lead II Rhythm Strip
-            const leadIdx = 1; // Lead II
-            const rawLead = currentSignal[leadIdx];
-            const midY = H / 2;
+            });
+        });
 
-            ctx.font = "700 13px Inter, sans-serif";
-            ctx.fillStyle = "#06b6d4";
-            ctx.fillText("Lead II — Continuous Rhythm Strip (10 seconds @ 100 Hz)", 16, 26);
-
-            ctx.lineWidth = 1.8;
-            ctx.strokeStyle = "#00f2fe";
-            ctx.beginPath();
-
-            for (let i = 0; i < rawLead.length; i++) {
-                const px = (i / (rawLead.length - 1)) * W;
-                const py = midY - rawLead[i] * 45;
-                if (i === 0) ctx.moveTo(px, py);
-                else ctx.lineTo(px, py);
-            }
-            ctx.stroke();
-        }
-    }
-
-    /* ─── Temporal Saliency Renderer ─── */
-    function renderTemporalSaliency(saliency) {
-        if (!saliency) return;
-        const dpr = window.devicePixelRatio || 1;
-        const rect = saliencyCanvas.getBoundingClientRect();
-        saliencyCanvas.width = rect.width * dpr;
-        saliencyCanvas.height = rect.height * dpr;
-
-        const ctx = saliencyCanvas.getContext("2d");
-        ctx.scale(dpr, dpr);
-        const W = rect.width;
-        const H = rect.height;
-
-        ctx.fillStyle = "#05070d";
-        ctx.fillRect(0, 0, W, H);
-
-        const leadSignal = currentSignal[1]; // Lead II
-        const midY = H / 2;
-
-        // Draw gradient attention heat map underneath
-        for (let i = 0; i < saliency.length; i++) {
-            const x = (i / (saliency.length - 1)) * W;
-            const alpha = Math.min(1.0, saliency[i] * 1.5);
-            ctx.fillStyle = `rgba(244, 63, 94, ${alpha * 0.4})`;
-            ctx.fillRect(x, 0, W / saliency.length + 1, H);
+        // Active Record Highlight Marker
+        const activeRecord = allRecords.find(r => r.id === currentRecordId);
+        if (activeRecord && activeRecord.coords_3d) {
+            traces.push({
+                x: [activeRecord.coords_3d.x],
+                y: [activeRecord.coords_3d.y],
+                z: [activeRecord.coords_3d.z],
+                text: [`★ ACTIVE: ${activeRecord.name}`],
+                mode: 'markers',
+                type: 'scatter3d',
+                name: 'Active Patient',
+                marker: {
+                    size: 11,
+                    color: '#ffffff',
+                    symbol: 'diamond',
+                    line: { color: '#06b6d4', width: 3 }
+                }
+            });
         }
 
-        // Draw Waveform on top
-        ctx.lineWidth = 1.4;
-        ctx.strokeStyle = "#ffffff";
-        ctx.beginPath();
-        for (let i = 0; i < leadSignal.length; i++) {
-            const px = (i / (leadSignal.length - 1)) * W;
-            const py = midY - leadSignal[i] * 28;
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-        }
-        ctx.stroke();
-    }
-
-    /* ─── Spectrogram Heatmap Renderer ─── */
-    function renderSpectrogram(spec) {
-        if (!spec) return;
-        const dpr = window.devicePixelRatio || 1;
-        const rect = spectrogramCanvas.getBoundingClientRect();
-        spectrogramCanvas.width = rect.width * dpr;
-        spectrogramCanvas.height = rect.height * dpr;
-
-        const ctx = spectrogramCanvas.getContext("2d");
-        ctx.scale(dpr, dpr);
-        const W = rect.width;
-        const H = rect.height;
-
-        const freqBins = spec.length;      // 33
-        const timeSteps = spec[0].length;  // ~32
-        const cellW = W / timeSteps;
-        const cellH = H / freqBins;
-
-        for (let f = 0; f < freqBins; f++) {
-            for (let t = 0; t < timeSteps; t++) {
-                const val = spec[f][t];
-                // Viridis/Plasma pseudo-colormap
-                const norm = Math.min(1.0, val / 4.0);
-                const r = Math.floor(255 * norm);
-                const g = Math.floor(180 * (1 - Math.abs(norm - 0.5) * 2));
-                const b = Math.floor(255 * (1 - norm));
-                ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-                ctx.fillRect(t * cellW, H - (f + 1) * cellH, cellW + 0.5, cellH + 0.5);
-            }
-        }
-    }
-
-    /* ─── Biomarker Radar & Table ─── */
-    function renderBiomarkers(bio) {
-        const radarLabels = ["HRV SDNN", "QRS Duration", "QTc Bazett", "ST Deviation", "R Amplitude", "PR Interval"];
-        const patientVals = [
-            Math.min(100, (bio.SDNN / 50) * 50),
-            Math.min(100, (bio.QRS_Duration / 120) * 50),
-            Math.min(100, (bio.QTc_Bazett / 450) * 50),
-            Math.min(100, 50 + bio.ST_Deviation * 40),
-            Math.min(100, (bio.R_Amplitude / 1.5) * 50),
-            Math.min(100, (bio.PR_Interval / 200) * 50),
-        ];
-
-        const normalVals = [50, 50, 50, 50, 50, 50];
-
-        const ctx = document.getElementById("biomarkerRadarChart").getContext("2d");
-        if (radarChart) radarChart.destroy();
-
-        radarChart = new Chart(ctx, {
-            type: "radar",
-            data: {
-                labels: radarLabels,
-                datasets: [
-                    {
-                        label: "Patient ECG",
-                        data: patientVals,
-                        backgroundColor: "rgba(6, 182, 212, 0.25)",
-                        borderColor: "#06b6d4",
-                        pointBackgroundColor: "#06b6d4",
-                        borderWidth: 2
-                    },
-                    {
-                        label: "Standard Reference",
-                        data: normalVals,
-                        backgroundColor: "rgba(255, 255, 255, 0.05)",
-                        borderColor: "rgba(255, 255, 255, 0.3)",
-                        borderWidth: 1,
-                        borderDash: [4, 4]
-                    }
-                ]
+        const layout = {
+            margin: { l: 0, r: 0, b: 0, t: 0 },
+            paper_bgcolor: 'transparent',
+            plot_bgcolor: 'transparent',
+            scene: {
+                xaxis: { title: 'PCA 1', gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.2)' },
+                yaxis: { title: 'PCA 2', gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.2)' },
+                zaxis: { title: 'PCA 3', gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.2)' },
+                bgcolor: 'transparent',
+                camera: { eye: { x: 1.4, y: 1.4, z: 1.1 } }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    r: {
-                        angleLines: { color: "rgba(255, 255, 255, 0.1)" },
-                        grid: { color: "rgba(255, 255, 255, 0.08)" },
-                        ticks: { display: false },
-                        suggestedMin: 0,
-                        suggestedMax: 100
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: { color: "#9ca3af", font: { family: "Inter", size: 11 } }
-                    }
+            legend: {
+                font: { color: '#94a3b8', family: 'Inter', size: 10 },
+                bgcolor: 'rgba(15,23,42,0.8)'
+            }
+        };
+
+        const config = { responsive: true, displayModeBar: false };
+        Plotly.newPlot(plotlyContainer, traces, layout, config);
+
+        plotlyContainer.on('plotly_click', (data) => {
+            if (data.points && data.points.length > 0) {
+                const pt = data.points[0];
+                if (pt.customdata) {
+                    selectRecord(pt.customdata);
                 }
             }
         });
+    }
 
-        // Table Rows
-        const tbody = document.getElementById("biomarkerTableBody");
-        tbody.innerHTML = `
+    async function loadRecordsCatalog() {
+        try {
+            const res = await fetch("/api/records");
+            const data = await res.json();
+            allRecords = data.records || [];
+            if (recordsTableBody) {
+                filterAndRenderTable();
+            }
+            if (sampleSelectHeader && sampleSelectHeader.options.length <= 1) {
+                sampleSelectHeader.innerHTML = "";
+                allRecords.forEach(r => {
+                    const opt = document.createElement("option");
+                    opt.value = r.id;
+                    opt.textContent = `${r.sample_code || r.id}: ${r.category} — ${r.name}`;
+                    sampleSelectHeader.appendChild(opt);
+                });
+            }
+        } catch (err) {
+            console.error("Failed to load records catalog:", err);
+        }
+    }
+
+    function filterAndRenderTable() {
+        if (!recordsTableBody) return;
+        const query = recordSearchInput ? recordSearchInput.value.toLowerCase().trim() : "";
+        const filtered = allRecords.filter(r => {
+            const matchesCat = (activeCategoryFilter === "ALL" || r.category === activeCategoryFilter);
+            const matchesQuery = !query || 
+                r.id.toLowerCase().includes(query) ||
+                (r.ecg_id && r.ecg_id.toString().includes(query)) ||
+                (r.name && r.name.toLowerCase().includes(query)) ||
+                (r.clinical_history && r.clinical_history.toLowerCase().includes(query)) ||
+                (r.category && r.category.toLowerCase().includes(query));
+            return matchesCat && matchesQuery;
+        });
+
+        recordsTableBody.innerHTML = "";
+        filtered.forEach(r => {
+            const tr = document.createElement("tr");
+            if (r.id === currentRecordId) tr.classList.add("active-row");
+
+            tr.innerHTML = `
+                <td><strong>${r.sample_code || r.id}</strong></td>
+                <td>${r.age}yo ${r.sex}</td>
+                <td><span class="patient-tag tag-${r.category.toLowerCase()}">${r.category}</span></td>
+                <td>${r.clinical_history || 'Routine 12-lead study'}</td>
+                <td>${r.heart_rate || 75} bpm</td>
+                <td><button class="btn-select-record" data-id="${r.id}">Inspect</button></td>
+            `;
+
+            tr.addEventListener("click", () => selectRecord(r.id));
+            recordsTableBody.appendChild(tr);
+        });
+    }
+
+    async function selectRecord(recordId) {
+        currentRecordId = recordId;
+
+        // Highlight in Catalog Table
+        if (recordsTableBody) {
+            document.querySelectorAll("#recordsTableBody tr").forEach(row => row.classList.remove("active-row"));
+            const activeTr = Array.from(recordsTableBody.querySelectorAll("tr")).find(tr => tr.innerHTML.includes(recordId));
+            if (activeTr) activeTr.classList.add("active-row");
+        }
+
+        if (sampleSelectHeader) {
+            sampleSelectHeader.value = recordId;
+        }
+
+        // Re-render 3D plot to update diamond marker
+        if (plotlyContainer) {
+            renderPlotly3D();
+        }
+
+        try {
+            const res = await fetch(`/api/sample/${recordId}`);
+            const data = await res.json();
+            if (data.status === "success" && data.payload) {
+                renderRecordDetail(data.payload);
+            }
+        } catch (err) {
+            console.error("Failed to load record details:", err);
+        }
+    }
+
+    function renderRecordDetail(payload) {
+        const record = payload.record;
+        
+        // Header
+        if (activeRecordTitle) activeRecordTitle.textContent = `Patient Case — ${record.name || record.id}`;
+        if (activeRecordTag) {
+            activeRecordTag.textContent = `DIAGNOSTIC CLASS: ${record.category}`;
+            activeRecordTag.className = `patient-tag tag-${record.category.toLowerCase()}`;
+        }
+        if (activeRecordMeta) {
+            activeRecordMeta.textContent = `${record.age}yo ${record.sex} • Heart Rate: ${record.heart_rate} bpm • Ground Truth: ${(record.ground_truth || []).join(', ')}`;
+        }
+
+        // Confidence Table
+        renderConfidenceTable(payload.model_confidences);
+
+        // 1. Raw Waveforms
+        if (rawEcgCanvas) draw12LeadWaveforms(rawEcgCanvas, payload.signal, false);
+
+        // 2. Temporal Integrated Gradients Attribution
+        if (temporalAttrCanvas) draw12LeadWaveforms(temporalAttrCanvas, payload.signal, true, payload.temporal_attributions);
+
+        // 3. Morphology 2D Grad-CAM Grid
+        if (gradcamGrid) renderGradCAMGrid(payload.morphology_gradcams);
+
+        // 4. Translated Waveform Attribution
+        if (translatedWaveformCanvas) drawTranslatedWaveform(translatedWaveformCanvas, payload.signal, payload.translated_boxes);
+
+        // 5. Biomarkers
+        if (biomarkerTableBody) renderBiomarkers(payload.biomarkers || {});
+
+        // 6. Gemini LLM Synthesis
+        generateLLMInterpretation(record.id, payload);
+    }
+
+    function renderConfidenceTable(conf) {
+        if (!confidenceTableBody) return;
+        confidenceTableBody.innerHTML = "";
+        for (const [modelName, probs] of Object.entries(conf || {})) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><strong>${modelName}</strong></td>
+                <td>${(probs.NORM || 0).toFixed(2)}%</td>
+                <td>${(probs.MI || 0).toFixed(2)}%</td>
+                <td>${(probs.STTC || 0).toFixed(2)}%</td>
+                <td>${(probs.CD || 0).toFixed(2)}%</td>
+                <td>${(probs.HYP || 0).toFixed(2)}%</td>
+            `;
+            confidenceTableBody.appendChild(tr);
+        }
+    }
+
+    function draw12LeadWaveforms(canvas, signals, overlayAttribution = false, attributions = []) {
+        if (!canvas || !signals || signals.length < 12) return;
+        const ctx = canvas.getContext("2d");
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = 480 * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        const width = rect.width;
+        const height = 480;
+
+        // Background
+        ctx.fillStyle = "#070d19";
+        ctx.fillRect(0, 0, width, height);
+
+        // Medical Grid Lines
+        ctx.strokeStyle = "rgba(6, 182, 212, 0.08)";
+        ctx.lineWidth = 1;
+        for (let x = 0; x < width; x += 20) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+        }
+        for (let y = 0; y < height; y += 20) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+        }
+
+        const leadHeight = height / 12;
+
+        for (let l = 0; l < 12; l++) {
+            const leadSignal = signals[l];
+            const leadAttr = (overlayAttribution && attributions[l]) ? attributions[l] : null;
+            const baseY = l * leadHeight + leadHeight / 2;
+
+            // Lead Name
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "bold 10px JetBrains Mono";
+            ctx.fillText(LEAD_NAMES[l], 8, baseY - 6);
+
+            // Lead Baseline
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+            ctx.beginPath();
+            ctx.moveTo(35, baseY);
+            ctx.lineTo(width - 10, baseY);
+            ctx.stroke();
+
+            // Trace
+            const numSamples = leadSignal.length;
+            const dx = (width - 45) / (numSamples - 1);
+
+            for (let i = 0; i < numSamples - 1; i++) {
+                const x1 = 35 + i * dx;
+                const y1 = baseY - leadSignal[i] * (leadHeight * 0.38);
+                const x2 = 35 + (i + 1) * dx;
+                const y2 = baseY - leadSignal[i + 1] * (leadHeight * 0.38);
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+
+                if (overlayAttribution && leadAttr) {
+                    const attrVal = (leadAttr[i] + leadAttr[i + 1]) / 2;
+                    if (attrVal > 0.45) {
+                        ctx.strokeStyle = `rgba(244, 63, 94, ${Math.min(1.0, 0.4 + attrVal * 0.6)})`;
+                        ctx.lineWidth = 2.4;
+                    } else if (attrVal > 0.25) {
+                        ctx.strokeStyle = `rgba(245, 158, 11, ${0.3 + attrVal * 0.5})`;
+                        ctx.lineWidth = 1.8;
+                    } else {
+                        ctx.strokeStyle = "rgba(148, 163, 184, 0.5)";
+                        ctx.lineWidth = 1.2;
+                    }
+                } else {
+                    ctx.strokeStyle = "#38bdf8";
+                    ctx.lineWidth = 1.3;
+                }
+                ctx.stroke();
+            }
+        }
+    }
+
+    function renderGradCAMGrid(gradcams) {
+        if (!gradcamGrid) return;
+        gradcamGrid.innerHTML = "";
+        if (!gradcams || gradcams.length < 12) return;
+
+        for (let l = 0; l < 12; l++) {
+            const card = document.createElement("div");
+            card.className = "gradcam-card";
+
+            const title = document.createElement("div");
+            title.className = "gradcam-lead-name";
+            title.textContent = `Lead ${LEAD_NAMES[l]} Grad-CAM`;
+
+            const canvas = document.createElement("canvas");
+            canvas.className = "gradcam-canvas";
+            card.appendChild(title);
+            card.appendChild(canvas);
+            gradcamGrid.appendChild(card);
+
+            drawGradCAMHeatmap(canvas, gradcams[l]);
+        }
+    }
+
+    function drawGradCAMHeatmap(canvas, matrix) {
+        if (!canvas || !matrix) return;
+        const ctx = canvas.getContext("2d");
+        const rows = matrix.length;
+        const cols = matrix[0].length;
+
+        canvas.width = 120;
+        canvas.height = 70;
+
+        const cellW = canvas.width / cols;
+        const cellH = canvas.height / rows;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const v = matrix[r][c];
+                // Turbo colormap approximation
+                const red = Math.min(255, Math.floor(v * 320));
+                const green = Math.min(255, Math.floor((1 - Math.abs(v - 0.5) * 2) * 255));
+                const blue = Math.min(255, Math.floor((1 - v) * 255));
+
+                ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+                ctx.fillRect(c * cellW, r * cellH, cellW + 0.5, cellH + 0.5);
+            }
+        }
+    }
+
+    function drawTranslatedWaveform(canvas, signals, boxes) {
+        if (!canvas || !signals) return;
+        draw12LeadWaveforms(canvas, signals, false);
+
+        const ctx = canvas.getContext("2d");
+        const rect = canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = 480;
+        const leadHeight = height / 12;
+        const numSamples = signals[0].length;
+        const dx = (width - 45) / (numSamples - 1);
+
+        (boxes || []).forEach(box => {
+            const l = box.lead || 1;
+            const baseY = l * leadHeight + leadHeight / 2;
+            const startX = 35 + box.start * dx;
+            const endX = 35 + box.end * dx;
+            const boxWidth = Math.max(12, endX - startX);
+
+            // Bounding box
+            ctx.fillStyle = "rgba(244, 63, 94, 0.18)";
+            ctx.strokeStyle = "#f43f5e";
+            ctx.lineWidth = 1.4;
+            ctx.fillRect(startX, baseY - leadHeight * 0.45, boxWidth, leadHeight * 0.9);
+            ctx.strokeRect(startX, baseY - leadHeight * 0.45, boxWidth, leadHeight * 0.9);
+
+            // Tag
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 9px Inter";
+            ctx.fillText(`${box.label} (${box.attr_score})`, startX + 2, baseY - leadHeight * 0.3);
+        });
+    }
+
+    function renderBiomarkers(bio) {
+        if (!biomarkerTableBody) return;
+        const radarCanvas = document.getElementById("biomarkerRadarChart");
+        const radarLabels = ["HRV SDNN", "QRS Duration", "QTc Bazett", "ST Deviation", "R Amplitude", "PR Interval"];
+        const sdnn = bio.SDNN || 35;
+        const qrs = bio.QRS_Duration || 90;
+        const qtc = bio.QTc_Bazett || 420;
+        const st = bio.ST_Deviation || 0;
+        const rAmp = bio.R_Amplitude || 1.2;
+        const pr = bio.PR_Interval || 160;
+
+        const patientVals = [
+            Math.min(100, (sdnn / 50) * 50),
+            Math.min(100, (qrs / 120) * 50),
+            Math.min(100, (qtc / 450) * 50),
+            Math.min(100, 50 + st * 40),
+            Math.min(100, (rAmp / 1.5) * 50),
+            Math.min(100, (pr / 200) * 50),
+        ];
+
+        if (radarCanvas && window.Chart) {
+            const ctx = radarCanvas.getContext("2d");
+            if (radarChart) radarChart.destroy();
+
+            radarChart = new Chart(ctx, {
+                type: "radar",
+                data: {
+                    labels: radarLabels,
+                    datasets: [
+                        {
+                            label: "Patient ECG Features",
+                            data: patientVals,
+                            backgroundColor: "rgba(6, 182, 212, 0.25)",
+                            borderColor: "#06b6d4",
+                            pointBackgroundColor: "#06b6d4",
+                            borderWidth: 2
+                        },
+                        {
+                            label: "Reference Baseline Envelope",
+                            data: [50, 50, 50, 50, 50, 50],
+                            backgroundColor: "rgba(255, 255, 255, 0.05)",
+                            borderColor: "rgba(255, 255, 255, 0.3)",
+                            borderWidth: 1,
+                            borderDash: [4, 4]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: "rgba(255, 255, 255, 0.1)" },
+                            grid: { color: "rgba(255, 255, 255, 0.08)" },
+                            ticks: { display: false },
+                            suggestedMin: 0,
+                            suggestedMax: 100
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: "#94a3b8", font: { family: "Inter", size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        biomarkerTableBody.innerHTML = `
             <tr>
                 <td><strong>QRS Duration</strong></td>
-                <td>${bio.QRS_Duration.toFixed(1)} ms</td>
+                <td>${qrs.toFixed(1)} ms</td>
                 <td>70 – 110 ms</td>
-                <td><span class="${bio.QRS_Duration > 120 ? 'text-danger' : 'text-success'}">${bio.QRS_Duration > 120 ? 'Prolonged (Conduction Delay)' : 'Normal'}</span></td>
+                <td><span class="${qrs > 120 ? 'text-danger' : 'text-success'}">${qrs > 120 ? 'Prolonged (Conduction Delay)' : 'Normal'}</span></td>
             </tr>
             <tr>
                 <td><strong>QTc (Bazett)</strong></td>
-                <td>${bio.QTc_Bazett.toFixed(1)} ms</td>
+                <td>${qtc.toFixed(1)} ms</td>
                 <td>360 – 440 ms</td>
-                <td><span class="${bio.QTc_Bazett > 460 ? 'text-danger' : 'text-success'}">${bio.QTc_Bazett > 460 ? 'Borderline / Prolonged' : 'Normal'}</span></td>
+                <td><span class="${qtc > 460 ? 'text-danger' : 'text-success'}">${qtc > 460 ? 'Prolonged' : 'Normal'}</span></td>
             </tr>
             <tr>
                 <td><strong>ST-Segment Deviation</strong></td>
-                <td>${bio.ST_Deviation > 0 ? '+' : ''}${bio.ST_Deviation.toFixed(2)} mV</td>
+                <td>${st > 0 ? '+' : ''}${st.toFixed(2)} mV</td>
                 <td>-0.05 – +0.10 mV</td>
-                <td><span class="${Math.abs(bio.ST_Deviation) > 0.15 ? 'text-danger' : 'text-success'}">${bio.ST_Deviation > 0.15 ? 'ST Elevation' : (bio.ST_Deviation < -0.1 ? 'ST Depression' : 'Isoelectric')}</span></td>
+                <td><span class="${Math.abs(st) > 0.15 ? 'text-danger' : 'text-success'}">${st > 0.15 ? 'ST Elevation' : (st < -0.1 ? 'ST Depression' : 'Isoelectric')}</span></td>
             </tr>
             <tr>
                 <td><strong>PR Interval</strong></td>
-                <td>${bio.PR_Interval.toFixed(1)} ms</td>
+                <td>${pr.toFixed(1)} ms</td>
                 <td>120 – 200 ms</td>
-                <td><span class="${bio.PR_Interval > 200 ? 'text-danger' : 'text-success'}">${bio.PR_Interval > 200 ? '1st Degree AV Block' : 'Normal'}</span></td>
+                <td><span class="${pr > 200 ? 'text-danger' : 'text-success'}">${pr > 200 ? '1st Degree AV Block' : 'Normal'}</span></td>
             </tr>
             <tr>
-                <td><strong>SDNN (HRV)</strong></td>
-                <td>${bio.SDNN.toFixed(1)} ms</td>
+                <td><strong>SDNN (Autonomic HRV)</strong></td>
+                <td>${sdnn.toFixed(1)} ms</td>
                 <td>> 30.0 ms</td>
-                <td><span class="${bio.SDNN < 20 ? 'text-danger' : 'text-success'}">${bio.SDNN < 20 ? 'Reduced Autonomic Tone' : 'Intact HRV'}</span></td>
+                <td><span class="${sdnn < 20 ? 'text-danger' : 'text-success'}">${sdnn < 20 ? 'Reduced HRV' : 'Intact'}</span></td>
             </tr>
         `;
     }
 
-    function renderTelemetry(rep) {
-        document.getElementById("codeTemporal").textContent = `[${rep.z_temporal_sample.slice(0, 8).map(v => v.toFixed(3)).join(", ")} ... (${rep.z_temporal_dim}D)]`;
-        document.getElementById("codeMorphology").textContent = `[${rep.z_morphology_sample.slice(0, 8).map(v => v.toFixed(3)).join(", ")} ... (${rep.z_morphology_dim}D)]`;
-    }
-
-    /* ─── Gemini LLM Report Generator ─── */
-    async function generateLLMInterpretation() {
-        const container = document.getElementById("llmReportContent");
-        container.innerHTML = `
+    async function generateLLMInterpretation(recordId, payload) {
+        if (!llmReportContent) return;
+        llmReportContent.innerHTML = `
             <div class="llm-loading-state">
                 <span class="spinner"></span>
-                <p>Generating expert cardiological synthesis from multimodal representations via Gemini API...</p>
+                <p>Synthesizing deep cardiological report from multimodal representations via Gemini API...</p>
             </div>
         `;
 
         try {
+            const record = (payload && payload.record) ? payload.record : allRecords.find(r => r.id === recordId);
+            const probs = (payload && payload.model_confidences && payload.model_confidences["Fusion (Joint)"]) ? payload.model_confidences["Fusion (Joint)"] : { NORM: 20, MI: 20, STTC: 20, CD: 20, HYP: 20 };
+
             const res = await fetch("/api/interpret", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    record_id: currentSample.id,
-                    detected_conditions: currentAnalysis.predictions.detected_conditions,
-                    probabilities: currentAnalysis.predictions.probabilities,
-                    thresholds: currentAnalysis.predictions.thresholds,
-                    biomarkers: currentBiomarkers,
+                    record_id: record ? record.name : recordId,
+                    detected_conditions: record ? record.ground_truth : ["ECG Abnormality"],
+                    probabilities: {
+                        NORM: (probs.NORM || 0) / 100,
+                        MI: (probs.MI || 0) / 100,
+                        STTC: (probs.STTC || 0) / 100,
+                        CD: (probs.CD || 0) / 100,
+                        HYP: (probs.HYP || 0) / 100,
+                    },
+                    thresholds: { NORM: 0.53, MI: 0.26, STTC: 0.25, CD: 0.30, HYP: 0.33 },
+                    biomarkers: (payload && payload.biomarkers) ? payload.biomarkers : {},
                     patient_metadata: {
-                        Age: currentSample.age,
-                        Sex: currentSample.sex,
-                        History: currentSample.clinical_history
+                        Age: record ? record.age : 60,
+                        Sex: record ? record.sex : "Unknown",
+                        History: record ? record.clinical_history : "ECG Study"
                     }
                 })
             });
 
             const data = await res.json();
-            if (data.report_markdown) {
-                container.innerHTML = marked.parse(data.report_markdown);
+            if (data.report_markdown && window.marked) {
+                llmReportContent.innerHTML = marked.parse(data.report_markdown);
             } else {
-                container.innerHTML = `<p class="text-danger">Failed to generate LLM consultation: ${data.message || 'Unknown error'}</p>`;
+                llmReportContent.innerHTML = `<p class="text-danger">Failed to generate LLM consultation: ${data.message || 'Unknown error'}</p>`;
             }
         } catch (err) {
             console.error("LLM interpretation failed:", err);
-            container.innerHTML = `<p class="text-danger">Error connecting to Gemini clinical interpreter service.</p>`;
+            llmReportContent.innerHTML = `<p class="text-danger">Error connecting to Gemini clinical interpreter service.</p>`;
         }
     }
 });
