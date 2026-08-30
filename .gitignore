@@ -3,6 +3,29 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Project temporary and intermediate experimental artifacts
+scratch/
+mlruns.bak/
+mlruns/
+*.db
+*.db.*
+*.db.bak
+*.zip
+shafali.ipynb
+biomarkers/embeddings_*.csv
+biomarkers/ecg_biomarkers_preprocessed.csv
+biomarkers/extraction_log_full.csv
+models/A*.pt
+models/B*.pt
+models/C*.pt
+!models/C5_full_dataset.pt
+models/D*.pt
+models/E*.pt
+models/G*.pt
+models/T*.pt
+evaluation/compare_*.py
+evaluation/run_*.py
+
 # C extensions
 *.so
 
