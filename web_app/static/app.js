@@ -1,5 +1,5 @@
 /**
- * ECG Multimodal Representation Cockpit — Interactive Frontend Controller
+ * ECG Multimodal Representation Cockpit â€” Interactive Frontend Controller
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -117,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
             manifoldModeSelect.addEventListener("change", (e) => {
                 const mode = e.target.value;
                 if (latentPillTag) {
-                    latentPillTag.textContent = mode === "tsne" ? "z_fused ∈ ℝ¹⁰⁵⁶ → t-SNE 3D" : "z_fused ∈ ℝ¹⁰⁵⁶ → PCA 3D";
+                    latentPillTag.textContent = mode === "tsne" ? "z_fused âˆˆ â„Â¹â°âµâ¶ â†’ t-SNE 3D" : "z_fused âˆˆ â„Â¹â°âµâ¶ â†’ PCA 3D";
                 }
                 renderPlotly3D();
             });
@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 x: [activeCoords.x],
                 y: [activeCoords.y],
                 z: [activeCoords.z],
-                text: [`★ ACTIVE: ${activeRecord.name}`],
+                text: [`â˜… ACTIVE: ${activeRecord.name}`],
                 mode: 'markers',
                 type: 'scatter3d',
                 name: 'Active Patient',
@@ -258,7 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td><span class="patient-tag tag-${r.category.toLowerCase()}">${r.category}</span></td>
                     <td>${r.clinical_history || 'Routine 12-lead study'}</td>
                     <td>${r.heart_rate || 75} bpm</td>
-                    <td><button class="btn-run-pipeline" data-id="${r.id}">▶ Run Pipeline</button></td>
+                    <td><button class="btn-run-pipeline" data-id="${r.id}">â–¶ Run Pipeline</button></td>
                 `;
 
                 tr.addEventListener("click", () => selectRecord(r.id, true));
@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
                     const startIndex = (currentPage - 1) * PAGE_SIZE;
                     const endIndex = Math.min(startIndex + PAGE_SIZE, totalCount);
-                    paginationInfo.textContent = `Page ${currentPage} of ${totalPages} (${startIndex + 1}–${endIndex} of ${totalCount})`;
+                    paginationInfo.textContent = `Page ${currentPage} of ${totalPages} (${startIndex + 1}â€“${endIndex} of ${totalCount})`;
                 }
             }
 
@@ -294,7 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 allRecords.forEach(r => {
                     const opt = document.createElement("option");
                     opt.value = r.id;
-                    opt.textContent = `${r.sample_code || r.id}: ${r.category} — ${r.name}`;
+                    opt.textContent = `${r.sample_code || r.id}: ${r.category} â€” ${r.name}`;
                     if (r.id === currentRecordId) opt.selected = true;
                     sampleSelectHeader.appendChild(opt);
                 });
@@ -344,13 +344,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const record = payload.record;
         
         // Header
-        if (activeRecordTitle) activeRecordTitle.textContent = `Patient Case — ${record.name || record.id}`;
+        if (activeRecordTitle) activeRecordTitle.textContent = `Patient Case â€” ${record.name || record.id}`;
         if (activeRecordTag) {
             activeRecordTag.textContent = `DIAGNOSTIC CLASS: ${record.category}`;
             activeRecordTag.className = `patient-tag tag-${record.category.toLowerCase()}`;
         }
         if (activeRecordMeta) {
-            activeRecordMeta.textContent = `${record.age}yo ${record.sex} • Heart Rate: ${record.heart_rate} bpm • Ground Truth: ${(record.ground_truth || []).join(', ')}`;
+            activeRecordMeta.textContent = `${record.age}yo ${record.sex} â€¢ Heart Rate: ${record.heart_rate} bpm â€¢ Ground Truth: ${(record.ground_truth || []).join(', ')}`;
         }
 
         // Confidence Table
@@ -642,37 +642,54 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderBiomarkers(bio) {
         if (!biomarkerTableBody) return;
         const radarCanvas = document.getElementById("biomarkerRadarChart");
-        const radarLabels = ["HRV SDNN", "QRS Duration", "QTc Bazett", "ST Deviation", "R Amplitude", "PR Interval"];
-        
-        // Auto-detect and convert seconds to milliseconds if < 2.0
-        const rawSdnn = bio.SDNN ?? 0.045;
-        const rawQrs = bio.QRS_Duration ?? 0.090;
-        const rawQtc = bio.QTc_Bazett ?? 0.410;
-        const rawPr = bio.PR_Interval ?? 0.160;
-        const rawSt = bio.ST_Deviation ?? 0.0;
-        const rawRAmp = bio.R_Amplitude ?? 1.1;
 
-        const sdnn = rawSdnn < 2.0 ? rawSdnn * 1000 : rawSdnn;
-        const qrs = rawQrs < 2.0 ? rawQrs * 1000 : rawQrs;
-        const qtc = rawQtc < 2.0 ? rawQtc * 1000 : rawQtc;
-        const pr = rawPr < 2.0 ? rawPr * 1000 : rawPr;
-        const st = rawSt;
-        const rAmp = rawRAmp;
+        // Helper: auto-convert seconds -> ms if value < 2.0
+        function toMs(v) { return (v != null && v < 2.0) ? v * 1000 : (v ?? 0); }
+        function fmt(v, dec=1) { return (v != null) ? parseFloat(v).toFixed(dec) : "—"; }
 
-        // Proportional Radar Normalization (50% is standard physiological baseline)
+        // Extract all 24 CWT features
+        const rrMean  = toMs(bio.RR_Mean);
+        const qrs     = toMs(bio.QRS_Duration);
+        const pr      = toMs(bio.PR_Interval);
+        const qt      = toMs(bio.QT_Interval);
+        const qtc     = toMs(bio.QTc_Bazett);
+        const stDur   = toMs(bio.ST_Duration);
+        const pDur    = toMs(bio.P_wave_Duration);
+        const rAmp    = bio.R_Amplitude ?? null;
+        const pAmp    = bio.P_Amplitude ?? null;
+        const tAmp    = bio.T_Amplitude ?? null;
+        const stDev   = bio.ST_Deviation ?? null;
+        const qAmp    = bio.Q_Amplitude ?? null;
+        const rsRatio = bio.R_S_Ratio ?? null;
+        const qrsEng  = bio.QRS_Energy ?? null;
+        const sdnn    = toMs(bio.SDNN);
+        const rmssd   = toMs(bio.RMSSD);
+        const pnn50   = bio.pNN50 ?? null;
+        const pnn20   = bio.pNN20 ?? null;
+        const sdrr    = bio.SDRR_RMSSD_Ratio ?? null;
+        const hrvTri  = bio.HRV_Triangular_Index ?? null;
+        const lfPow   = bio.LF_Power ?? null;
+        const hfPow   = bio.HF_Power ?? null;
+        const lfhf    = bio.LF_HF_Ratio ?? null;
+        const totPow  = bio.Total_Power ?? null;
+
+        // 8-axis Radar (representative clinical axes from the 24 CWT features)
+        const radarLabels = ["RR Mean", "QRS Dur", "PR Interval", "QTc", "ST Dev", "R Amp", "SDNN", "LF/HF"];
+        const normalize = (v, lo, hi) => Math.max(5, Math.min(100, ((v - lo) / (hi - lo)) * 100));
         const patientVals = [
-            Math.max(10, Math.min(100, (sdnn / 50) * 50)),
-            Math.max(10, Math.min(100, (qrs / 90) * 50)),
-            Math.max(10, Math.min(100, (qtc / 410) * 50)),
-            Math.max(10, Math.min(100, 50 + st * 150)),
-            Math.max(10, Math.min(100, (rAmp / 1.0) * 50)),
-            Math.max(10, Math.min(100, (pr / 160) * 50)),
+            normalize(rrMean, 600, 1100),
+            normalize(qrs, 60, 130),
+            normalize(pr, 100, 220),
+            normalize(qtc, 340, 480),
+            normalize((stDev ?? 0) + 0.15, 0, 0.30),
+            normalize(rAmp ?? 1.0, 0, 2.5),
+            normalize(sdnn, 10, 90),
+            normalize(lfhf ?? 1.0, 0, 4.0),
         ];
 
         if (radarCanvas && window.Chart) {
             const ctx = radarCanvas.getContext("2d");
             if (radarChart) radarChart.destroy();
-
             radarChart = new Chart(ctx, {
                 type: "radar",
                 data: {
@@ -688,7 +705,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         },
                         {
                             label: "Reference Baseline Envelope",
-                            data: [50, 50, 50, 50, 50, 50],
+                            data: [50, 50, 50, 50, 50, 50, 50, 50],
                             backgroundColor: "rgba(255, 255, 255, 0.05)",
                             borderColor: "rgba(255, 255, 255, 0.3)",
                             borderWidth: 1,
@@ -704,6 +721,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             angleLines: { color: "rgba(255, 255, 255, 0.1)" },
                             grid: { color: "rgba(255, 255, 255, 0.08)" },
                             ticks: { display: false },
+                            pointLabels: { color: "#94a3b8", font: { family: "Inter", size: 11 } },
                             suggestedMin: 0,
                             suggestedMax: 100
                         }
@@ -715,61 +733,66 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // Clinical Evaluation Statuses
-        let qrsEval = '<span class="text-success">Normal (70–110 ms)</span>';
-        if (qrs > 120) qrsEval = '<span class="text-danger">Prolonged (Conduction Delay)</span>';
-        else if (qrs < 70) qrsEval = '<span class="text-warning">Narrow QRS</span>';
+        // Clinical evaluation helpers
+        const ok   = t => `<span class="text-success">${t}</span>`;
+        const warn = t => `<span class="text-warning">${t}</span>`;
+        const bad  = t => `<span class="text-danger">${t}</span>`;
 
-        let qtcEval = '<span class="text-success">Normal (360–440 ms)</span>';
-        if (qtc > 460) qtcEval = '<span class="text-danger">Prolonged QTc</span>';
-        else if (qtc < 350) qtcEval = '<span class="text-warning">Short QTc</span>';
-
-        let stEval = '<span class="text-success">Isoelectric</span>';
-        if (st > 0.10) stEval = `<span class="text-danger">ST-Elevation (+${st.toFixed(2)} mV)</span>`;
-        else if (st < -0.08) stEval = `<span class="text-danger">ST-Depression (${st.toFixed(2)} mV)</span>`;
-
-        let prEval = '<span class="text-success">Normal</span>';
-        if (pr > 200) prEval = '<span class="text-danger">1st Degree AV Block</span>';
-        else if (pr < 110) prEval = '<span class="text-warning">Short PR (Pre-excitation)</span>';
-
-        let sdnnEval = '<span class="text-success">Intact Autonomic Tone</span>';
-        if (sdnn < 25) sdnnEval = '<span class="text-danger">Severely Depressed</span>';
-        else if (sdnn < 40) sdnnEval = '<span class="text-warning">Reduced HRV</span>';
+        // Interval evaluations
+        const qrsEval  = qrs > 120 ? bad("Prolonged — Conduction Delay") : qrs < 70 ? warn("Narrow QRS") : ok("Normal (70–110 ms)");
+        const prEval   = pr > 200 ? bad("1st Degree AV Block") : pr < 110 ? warn("Short PR — Pre-excitation") : ok("Normal (120–200 ms)");
+        const qtEval   = qt > 450 ? bad("Prolonged QT") : qt < 330 ? warn("Short QT") : ok("Normal (350–450 ms)");
+        const qtcEval  = qtc > 460 ? bad("Prolonged QTc ≥ 460 ms") : qtc < 350 ? warn("Short QTc") : ok("Normal (360–440 ms)");
+        const rrEval   = rrMean < 600 ? warn("Tachycardia") : rrMean > 1200 ? warn("Bradycardia") : ok("Normal Sinus Rhythm");
+        const stDurEval = stDur > 120 ? warn("Prolonged ST") : ok("Normal");
+        const pDurEval = pDur > 120 ? bad("Atrial Overload") : pDur < 60 ? warn("Short P-wave") : ok("Normal (60–120 ms)");
+        // Amplitude evaluations
+        const rAmpEval = rAmp == null ? "—" : rAmp > 2.5 ? warn("High R — LVH?") : rAmp < 0.3 ? warn("Low Voltage") : ok("Normal");
+        const pAmpEval = pAmp == null ? "—" : pAmp > 0.25 ? warn("Tall P — P Pulmonale?") : ok("Normal");
+        const tAmpEval = tAmp == null ? "—" : tAmp < 0 ? bad("T-wave Inversion") : tAmp > 1.0 ? warn("Hyperacute T") : ok("Normal");
+        const stDevEval = stDev == null ? "—" : stDev > 0.10 ? bad(`ST-Elevation +${fmt(stDev,2)} mV`) : stDev < -0.08 ? bad(`ST-Depression ${fmt(stDev,2)} mV`) : ok("Isoelectric");
+        const qAmpEval = qAmp == null ? "—" : Math.abs(qAmp) > 0.3 ? bad("Pathological Q-wave") : ok("Normal");
+        const rsEval   = rsRatio == null ? "—" : rsRatio > 1 ? ok("Normal (R > S)") : warn("R/S < 1 — Anterior Dominance?");
+        // HRV evaluations
+        const sdnnEval  = sdnn < 25 ? bad("Severely Depressed HRV") : sdnn < 40 ? warn("Reduced HRV") : ok("Intact Autonomic Tone");
+        const rmssdEval = rmssd == null ? "—" : rmssd < 15 ? bad("Parasympathetic Withdrawal") : rmssd < 30 ? warn("Reduced") : ok("Normal (≥ 30 ms)");
+        const pnn50Eval = pnn50 == null ? "—" : pnn50 < 3 ? warn("Low pNN50") : ok("Normal");
+        const pnn20Eval = pnn20 == null ? "—" : pnn20 < 10 ? warn("Low pNN20") : ok("Normal");
+        const sdrEval   = sdrr == null ? "—" : ok("Computed");
+        const hrvTriEval = hrvTri == null ? "—" : hrvTri < 10 ? bad("Reduced") : ok("Normal (≥ 10)");
+        const lfhfEval  = lfhf == null ? "—" : lfhf > 3.0 ? warn("Sympathetic Dominance") : lfhf < 0.5 ? warn("Parasympathetic Dominance") : ok("Balanced ANS");
 
         biomarkerTableBody.innerHTML = `
-            <tr>
-                <td><strong>QRS Duration</strong></td>
-                <td>${qrs.toFixed(1)} ms</td>
-                <td>70 – 110 ms</td>
-                <td>${qrsEval}</td>
-            </tr>
-            <tr>
-                <td><strong>QTc (Bazett)</strong></td>
-                <td>${qtc.toFixed(1)} ms</td>
-                <td>360 – 440 ms</td>
-                <td>${qtcEval}</td>
-            </tr>
-            <tr>
-                <td><strong>ST-Segment Deviation</strong></td>
-                <td>${st > 0 ? '+' : ''}${st.toFixed(2)} mV</td>
-                <td>-0.05 – +0.10 mV</td>
-                <td>${stEval}</td>
-            </tr>
-            <tr>
-                <td><strong>PR Interval</strong></td>
-                <td>${pr.toFixed(1)} ms</td>
-                <td>120 – 200 ms</td>
-                <td>${prEval}</td>
-            </tr>
-            <tr>
-                <td><strong>SDNN (Autonomic HRV)</strong></td>
-                <td>${sdnn.toFixed(1)} ms</td>
-                <td>> 30.0 ms</td>
-                <td>${sdnnEval}</td>
-            </tr>
+            <tr class="table-section-header"><td colspan="4" style="color:#06b6d4;font-size:11px;padding:6px 8px;letter-spacing:0.08em;text-transform:uppercase;opacity:0.8">⏱ Interval Features</td></tr>
+            <tr><td><strong>RR Mean</strong></td><td>${fmt(rrMean)} ms</td><td>600 – 1000 ms</td><td>${rrEval}</td></tr>
+            <tr><td><strong>QRS Duration</strong></td><td>${fmt(qrs)} ms</td><td>70 – 110 ms</td><td>${qrsEval}</td></tr>
+            <tr><td><strong>PR Interval</strong></td><td>${fmt(pr)} ms</td><td>120 – 200 ms</td><td>${prEval}</td></tr>
+            <tr><td><strong>QT Interval</strong></td><td>${fmt(qt)} ms</td><td>350 – 450 ms</td><td>${qtEval}</td></tr>
+            <tr><td><strong>QTc (Bazett)</strong></td><td>${fmt(qtc)} ms</td><td>360 – 440 ms</td><td>${qtcEval}</td></tr>
+            <tr><td><strong>ST Duration</strong></td><td>${fmt(stDur)} ms</td><td>80 – 120 ms</td><td>${stDurEval}</td></tr>
+            <tr><td><strong>P-wave Duration</strong></td><td>${fmt(pDur)} ms</td><td>60 – 120 ms</td><td>${pDurEval}</td></tr>
+            <tr class="table-section-header"><td colspan="4" style="color:#a78bfa;font-size:11px;padding:6px 8px;letter-spacing:0.08em;text-transform:uppercase;opacity:0.8">📐 Amplitude Features</td></tr>
+            <tr><td><strong>R Amplitude</strong></td><td>${rAmp != null ? fmt(rAmp,3)+" mV" : "—"}</td><td>0.5 – 2.0 mV</td><td>${rAmpEval}</td></tr>
+            <tr><td><strong>P Amplitude</strong></td><td>${pAmp != null ? fmt(pAmp,3)+" mV" : "—"}</td><td>0.05 – 0.25 mV</td><td>${pAmpEval}</td></tr>
+            <tr><td><strong>T Amplitude</strong></td><td>${tAmp != null ? fmt(tAmp,3)+" mV" : "—"}</td><td>0.1 – 0.8 mV</td><td>${tAmpEval}</td></tr>
+            <tr><td><strong>ST-Segment Deviation</strong></td><td>${stDev != null ? (stDev>=0?"+":"")+fmt(stDev,3)+" mV" : "—"}</td><td>-0.05 – +0.10 mV</td><td>${stDevEval}</td></tr>
+            <tr><td><strong>Q Amplitude</strong></td><td>${qAmp != null ? fmt(qAmp,3)+" mV" : "—"}</td><td>&lt; 0.3 mV</td><td>${qAmpEval}</td></tr>
+            <tr><td><strong>R/S Ratio</strong></td><td>${rsRatio != null ? fmt(rsRatio,2) : "—"}</td><td>&gt; 1.0 (lateral)</td><td>${rsEval}</td></tr>
+            <tr><td><strong>QRS Energy</strong></td><td>${qrsEng != null ? fmt(qrsEng,4) : "—"}</td><td>Signal power</td><td>${qrsEng != null ? ok("Computed") : "—"}</td></tr>
+            <tr class="table-section-header"><td colspan="4" style="color:#34d399;font-size:11px;padding:6px 8px;letter-spacing:0.08em;text-transform:uppercase;opacity:0.8">🫀 HRV Time-Domain</td></tr>
+            <tr><td><strong>SDNN</strong></td><td>${fmt(sdnn)} ms</td><td>&gt; 40 ms</td><td>${sdnnEval}</td></tr>
+            <tr><td><strong>RMSSD</strong></td><td>${fmt(rmssd)} ms</td><td>&gt; 30 ms</td><td>${rmssdEval}</td></tr>
+            <tr><td><strong>pNN50</strong></td><td>${pnn50 != null ? fmt(pnn50,1)+" %" : "—"}</td><td>&gt; 3 %</td><td>${pnn50Eval}</td></tr>
+            <tr><td><strong>pNN20</strong></td><td>${pnn20 != null ? fmt(pnn20,1)+" %" : "—"}</td><td>&gt; 10 %</td><td>${pnn20Eval}</td></tr>
+            <tr><td><strong>SDRR/RMSSD Ratio</strong></td><td>${sdrr != null ? fmt(sdrr,2) : "—"}</td><td>Balance index</td><td>${sdrEval}</td></tr>
+            <tr><td><strong>HRV Triangular Index</strong></td><td>${hrvTri != null ? fmt(hrvTri,2) : "—"}</td><td>&gt; 10</td><td>${hrvTriEval}</td></tr>
+            <tr class="table-section-header"><td colspan="4" style="color:#fb923c;font-size:11px;padding:6px 8px;letter-spacing:0.08em;text-transform:uppercase;opacity:0.8">📡 HRV Frequency-Domain</td></tr>
+            <tr><td><strong>LF Power</strong></td><td>${lfPow != null ? fmt(lfPow,2)+" ms²" : "—"}</td><td>0.04 – 0.15 Hz band</td><td>${lfPow != null ? ok("Recorded") : "—"}</td></tr>
+            <tr><td><strong>HF Power</strong></td><td>${hfPow != null ? fmt(hfPow,2)+" ms²" : "—"}</td><td>0.15 – 0.40 Hz band</td><td>${hfPow != null ? ok("Recorded") : "—"}</td></tr>
+            <tr><td><strong>LF/HF Ratio</strong></td><td>${lfhf != null ? fmt(lfhf,2) : "—"}</td><td>0.5 – 2.0</td><td>${lfhfEval}</td></tr>
+            <tr><td><strong>Total HRV Power</strong></td><td>${totPow != null ? fmt(totPow,2)+" ms²" : "—"}</td><td>Spectral sum</td><td>${totPow != null ? ok("Recorded") : "—"}</td></tr>
         `;
     }
-
     async function generateLLMInterpretation(recordId, payload) {
         if (!llmReportContent) return;
         llmReportContent.innerHTML = `
