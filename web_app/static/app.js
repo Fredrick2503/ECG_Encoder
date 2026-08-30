@@ -1,5 +1,5 @@
-/**
- * ECG Multimodal Representation Cockpit â€” Interactive Frontend Controller
+﻿/**
+ * ECG Multimodal Representation Cockpit "” Interactive Frontend Controller
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -257,25 +257,24 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td>${r.age}yo ${r.sex}</td>
                     <td><span class="patient-tag tag-${r.category.toLowerCase()}">${r.category}</span></td>
                     <td>${r.clinical_history || 'Routine 12-lead study'}</td>
-                    <td>${r.heart_rate || 75} bpm</td>
-                    <td><button class="btn-run-pipeline" data-id="${r.id}">â–¶ Run Pipeline</button></td>
+                    <td>${r.heart_rate > 300 ? Math.round(60000 / r.heart_rate) : (r.heart_rate || 75)} bpm</td>
+                    <td><button class="btn-run-pipeline" data-id="${r.id}">▶ Run Pipeline</button></td>
                 `;
 
                 tr.addEventListener("click", () => selectRecord(r.id, true));
                 recordsTableBody.appendChild(tr);
             });
 
-            // Update Pagination Controls
+                        // Update Pagination Controls
             if (paginationInfo) {
                 if (totalCount === 0) {
                     paginationInfo.textContent = "0 records found";
                 } else {
                     const startIndex = (currentPage - 1) * PAGE_SIZE;
                     const endIndex = Math.min(startIndex + PAGE_SIZE, totalCount);
-                    paginationInfo.textContent = `Page ${currentPage} of ${totalPages} (${startIndex + 1}â€“${endIndex} of ${totalCount})`;
+                    paginationInfo.textContent = `Page ${currentPage} of ${totalPages} (${startIndex + 1}–${endIndex} of ${totalCount})`;
                 }
             }
-
             if (btnPrevPage) {
                 btnPrevPage.disabled = (currentPage <= 1);
             }
@@ -294,7 +293,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 allRecords.forEach(r => {
                     const opt = document.createElement("option");
                     opt.value = r.id;
-                    opt.textContent = `${r.sample_code || r.id}: ${r.category} â€” ${r.name}`;
+                    opt.textContent = `${r.sample_code || r.id}: ${r.category} "” ${r.name}`;
                     if (r.id === currentRecordId) opt.selected = true;
                     sampleSelectHeader.appendChild(opt);
                 });
@@ -344,13 +343,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const record = payload.record;
         
         // Header
-        if (activeRecordTitle) activeRecordTitle.textContent = `Patient Case â€” ${record.name || record.id}`;
+        if (activeRecordTitle) activeRecordTitle.textContent = `Patient Case "” ${record.name || record.id}`;
         if (activeRecordTag) {
             activeRecordTag.textContent = `DIAGNOSTIC CLASS: ${record.category}`;
             activeRecordTag.className = `patient-tag tag-${record.category.toLowerCase()}`;
         }
         if (activeRecordMeta) {
-            activeRecordMeta.textContent = `${record.age}yo ${record.sex} â€¢ Heart Rate: ${record.heart_rate} bpm â€¢ Ground Truth: ${(record.ground_truth || []).join(', ')}`;
+            const displayHR = record.heart_rate > 300 ? Math.round(60000 / record.heart_rate) : (record.heart_rate || 75);
+            activeRecordMeta.textContent = `${record.age}yo ${record.sex}  ·  Heart Rate: ${displayHR} bpm  ·  Ground Truth: ${(record.ground_truth || []).join(', ')}`;
         }
 
         // Confidence Table
