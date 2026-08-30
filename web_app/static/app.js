@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let allRecords = [];
     let currentRecordId = "REC-1";
     let activeCategoryFilter = "ALL";
+    let currentPage = 1;
+    const PAGE_SIZE = 20;
     let radarChart = null;
     let embeddings3DData = null;
 
@@ -17,6 +19,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnScrollToRecord = document.getElementById("btnScrollToRecord");
     const btnRegenLLM = document.getElementById("btnRegenLLM");
     const sampleSelectHeader = document.getElementById("sampleSelectHeader");
+
+    const btnPrevPage = document.getElementById("btnPrevPage");
+    const btnNextPage = document.getElementById("btnNextPage");
+    const paginationInfo = document.getElementById("paginationInfo");
 
     const activeRecordTitle = document.getElementById("activeRecordTitle");
     const activeRecordTag = document.getElementById("activeRecordTag");
@@ -50,7 +56,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function setupEventListeners() {
         if (recordSearchInput) {
-            recordSearchInput.addEventListener("input", filterAndRenderTable);
+            recordSearchInput.addEventListener("input", () => {
+                currentPage = 1;
+                filterAndRenderTable();
+            });
         }
 
         if (categoryFilterPills) {
@@ -59,8 +68,25 @@ document.addEventListener("DOMContentLoaded", () => {
                     document.querySelectorAll("#categoryFilterPills .pill").forEach(p => p.classList.remove("active"));
                     e.target.classList.add("active");
                     activeCategoryFilter = e.target.getAttribute("data-cat");
+                    currentPage = 1;
                     filterAndRenderTable();
                 }
+            });
+        }
+
+        if (btnPrevPage) {
+            btnPrevPage.addEventListener("click", () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    filterAndRenderTable();
+                }
+            });
+        }
+
+        if (btnNextPage) {
+            btnNextPage.addEventListener("click", () => {
+                currentPage++;
+                filterAndRenderTable();
             });
         }
 
@@ -185,20 +211,72 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    let isFirstLoad = true;
+
     async function loadRecordsCatalog() {
+        if (!recordsTableBody) return;
+        
+        const query = recordSearchInput ? recordSearchInput.value.trim() : "";
+        const cat = activeCategoryFilter;
+        
         try {
-            const res = await fetch("/api/records");
+            const res = await fetch(`/api/records?page=${currentPage}&limit=${PAGE_SIZE}&category=${cat}&search=${encodeURIComponent(query)}`);
             const data = await res.json();
+            
             allRecords = data.records || [];
-            if (recordsTableBody) {
-                filterAndRenderTable();
+            const totalCount = data.total_count || 0;
+            const totalPages = data.total_pages || 1;
+            
+            // Render table rows for the 20 records
+            recordsTableBody.innerHTML = "";
+            allRecords.forEach(r => {
+                const tr = document.createElement("tr");
+                if (r.id === currentRecordId) tr.classList.add("active-row");
+
+                tr.innerHTML = `
+                    <td><strong>${r.sample_code || r.id}</strong></td>
+                    <td>${r.age}yo ${r.sex}</td>
+                    <td><span class="patient-tag tag-${r.category.toLowerCase()}">${r.category}</span></td>
+                    <td>${r.clinical_history || 'Routine 12-lead study'}</td>
+                    <td>${r.heart_rate || 75} bpm</td>
+                    <td><button class="btn-select-record" data-id="${r.id}">Inspect</button></td>
+                `;
+
+                tr.addEventListener("click", () => selectRecord(r.id));
+                recordsTableBody.appendChild(tr);
+            });
+
+            // Update Pagination Controls
+            if (paginationInfo) {
+                if (totalCount === 0) {
+                    paginationInfo.textContent = "0 records found";
+                } else {
+                    const startIndex = (currentPage - 1) * PAGE_SIZE;
+                    const endIndex = Math.min(startIndex + PAGE_SIZE, totalCount);
+                    paginationInfo.textContent = `Page ${currentPage} of ${totalPages} (${startIndex + 1}–${endIndex} of ${totalCount})`;
+                }
             }
-            if (sampleSelectHeader && sampleSelectHeader.options.length <= 1) {
+
+            if (btnPrevPage) {
+                btnPrevPage.disabled = (currentPage <= 1);
+            }
+            if (btnNextPage) {
+                btnNextPage.disabled = (currentPage >= totalPages);
+            }
+
+            if (isFirstLoad && allRecords.length > 0) {
+                isFirstLoad = false;
+                selectRecord(allRecords[0].id);
+            }
+            
+            // Update sample select in header
+            if (sampleSelectHeader) {
                 sampleSelectHeader.innerHTML = "";
                 allRecords.forEach(r => {
                     const opt = document.createElement("option");
                     opt.value = r.id;
                     opt.textContent = `${r.sample_code || r.id}: ${r.category} — ${r.name}`;
+                    if (r.id === currentRecordId) opt.selected = true;
                     sampleSelectHeader.appendChild(opt);
                 });
             }
@@ -208,36 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function filterAndRenderTable() {
-        if (!recordsTableBody) return;
-        const query = recordSearchInput ? recordSearchInput.value.toLowerCase().trim() : "";
-        const filtered = allRecords.filter(r => {
-            const matchesCat = (activeCategoryFilter === "ALL" || r.category === activeCategoryFilter);
-            const matchesQuery = !query || 
-                r.id.toLowerCase().includes(query) ||
-                (r.ecg_id && r.ecg_id.toString().includes(query)) ||
-                (r.name && r.name.toLowerCase().includes(query)) ||
-                (r.clinical_history && r.clinical_history.toLowerCase().includes(query)) ||
-                (r.category && r.category.toLowerCase().includes(query));
-            return matchesCat && matchesQuery;
-        });
-
-        recordsTableBody.innerHTML = "";
-        filtered.forEach(r => {
-            const tr = document.createElement("tr");
-            if (r.id === currentRecordId) tr.classList.add("active-row");
-
-            tr.innerHTML = `
-                <td><strong>${r.sample_code || r.id}</strong></td>
-                <td>${r.age}yo ${r.sex}</td>
-                <td><span class="patient-tag tag-${r.category.toLowerCase()}">${r.category}</span></td>
-                <td>${r.clinical_history || 'Routine 12-lead study'}</td>
-                <td>${r.heart_rate || 75} bpm</td>
-                <td><button class="btn-select-record" data-id="${r.id}">Inspect</button></td>
-            `;
-
-            tr.addEventListener("click", () => selectRecord(r.id));
-            recordsTableBody.appendChild(tr);
-        });
+        loadRecordsCatalog();
     }
 
     async function selectRecord(recordId) {

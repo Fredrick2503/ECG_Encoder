@@ -66,9 +66,50 @@ class ECGWebAppHandler(BaseHTTPRequestHandler):
         path = parsed.path
         
         # API Routes
-        if path == "/api/samples":
-            samples = sample_manager.get_preset_samples()
-            self._send_json({"status": "success", "samples": samples})
+        if path == "/api/embeddings_3d" or path == "/api/embeddings":
+            emb = sample_manager.get_3d_embeddings()
+            self._send_json(emb)
+            return
+
+        elif path == "/api/records" or path == "/api/samples":
+            params = parse_qs(parsed.query)
+            try:
+                page = max(1, int(params.get("page", ["1"])[0]))
+            except ValueError:
+                page = 1
+            try:
+                limit = max(1, min(100, int(params.get("limit", ["20"])[0])))
+            except ValueError:
+                limit = 20
+
+            cat = params.get("category", ["ALL"])[0].strip()
+            search = params.get("search", [""])[0].lower().strip()
+
+            all_records = sample_manager.get_all_records()
+            filtered = []
+            for r in all_records:
+                if cat != "ALL" and r.get("category") != cat:
+                    continue
+                if search:
+                    text_blob = f"{r.get('id', '')} {r.get('sample_code', '')} {r.get('name', '')} {r.get('category', '')} {r.get('clinical_history', '')} {r.get('age', '')}".lower()
+                    if search not in text_blob:
+                        continue
+                filtered.append(r)
+
+            total_count = len(filtered)
+            start_idx = (page - 1) * limit
+            end_idx = min(start_idx + limit, total_count)
+            paginated_records = filtered[start_idx:end_idx]
+
+            self._send_json({
+                "status": "success",
+                "total_count": total_count,
+                "page": page,
+                "limit": limit,
+                "total_pages": max(1, (total_count + limit - 1) // limit),
+                "records": paginated_records,
+                "samples": paginated_records
+            })
             return
             
         elif path.startswith("/api/sample/"):
