@@ -111,6 +111,15 @@
 
         <!-- SECTION 2: Active Selected Record Deep Dive -->
         <section class="card full-width sample-detail-card" id="activeRecordSection">
+            <!-- Sleek Loading Overlay -->
+            <div id="activeRecordLoadingOverlay" class="loading-overlay hidden">
+                <div class="loading-spinner-box">
+                    <div class="ecg-pulse-spinner"></div>
+                    <h4 class="loading-title">⚡ Running Multimodal AI Pipeline...</h4>
+                    <p class="loading-subtitle">Extracting 12-lead signals, computing Integrated Gradients, Grad-CAM, & 1056-D fusion representations</p>
+                </div>
+            </div>
+
             <div class="card-header">
                 <div class="card-title-group">
                     <span class="card-icon">🫀</span>
