@@ -131,7 +131,11 @@ def main():
     predict_parser.add_argument("--input", "-i", type=str, required=True, help="Path to .npy array or signal file")
     predict_parser.add_argument("--device", type=str, default="cpu", help="Device (cpu or cuda)")
     
+<<<<<<< HEAD
     # Web App command
+=======
+    # App command
+>>>>>>> backup
     app_parser = subparsers.add_parser("app", help="Launch the interactive multimodal web dashboard")
     app_parser.add_argument("--port", "-p", type=int, default=8080, help="Port to host web dashboard (default: 8080)")
     
