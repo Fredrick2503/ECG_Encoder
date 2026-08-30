@@ -111,13 +111,22 @@ class BiomarkerEncoderWrapper(BaseEncoder):
         super().__init__()
         self._output_dim = 32
         self.device = device
-        self.model = AttentionMLPAutoencoder(input_dim=50, latent_dim=32).to(device)
         
+        # Detect input dimension from state dict if available
+        input_dim = 48
+        state_dict = None
         if model_path and os.path.exists(model_path):
             try:
                 state_dict = torch.load(model_path, map_location=device, weights_only=False)
             except TypeError:
                 state_dict = torch.load(model_path, map_location=device)
+            if "enc1.weight" in state_dict:
+                input_dim = state_dict["enc1.weight"].shape[1]
+                
+        self.input_dim = input_dim
+        self.model = AttentionMLPAutoencoder(input_dim=input_dim, latent_dim=32).to(device)
+        
+        if state_dict is not None:
             self.model.load_state_dict(state_dict)
             
         self.model.eval()

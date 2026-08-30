@@ -7,11 +7,14 @@ Extracts or formats clinical biomarkers into joint missingness-masked feature ve
 from __future__ import annotations
 import os
 import pickle
+import warnings
 from pathlib import Path
 from typing import Optional, Union
 import numpy as np
 import torch
 from ecg_engine.interfaces import BaseBiomarkerService
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 FEATURES = [
@@ -61,16 +64,19 @@ class BiomarkerService(BaseBiomarkerService):
         Returns:
             torch.Tensor: Shape (batch_size, 50).
         """
+        # Determine feature count
+        n_features = 24
+        if self.scaler is not None and hasattr(self.scaler, "n_features_in_"):
+            n_features = self.scaler.n_features_in_
+            
         if raw_features is not None:
             feats = np.asarray(raw_features, dtype=np.float32)
             if feats.ndim == 1:
                 feats = feats.reshape(1, -1)
             
-            if feats.shape[1] == 50:
-                # Already joint 50-dim representation
+            if feats.shape[1] == n_features * 2:
                 return torch.from_numpy(feats).float()
-            elif feats.shape[1] == 25:
-                # Need imputation, scaling, and missingness mask
+            elif feats.shape[1] == n_features:
                 mask = (~np.isnan(feats)).astype(np.float32)
                 if self.imputer is not None:
                     feats_imp = self.imputer.transform(feats)
@@ -82,11 +88,11 @@ class BiomarkerService(BaseBiomarkerService):
                 else:
                     feats_scaled = feats_imp
                     
-                joint = np.concatenate([feats_scaled, mask], axis=1) # 50-D
+                joint = np.concatenate([feats_scaled, mask], axis=1)
                 return torch.from_numpy(joint.astype(np.float32)).float()
 
         # Fallback: create default zero/neutral feature vectors with missingness mask = 0
-        feats_scaled = np.zeros((batch_size, 25), dtype=np.float32)
-        mask = np.zeros((batch_size, 25), dtype=np.float32)
+        feats_scaled = np.zeros((batch_size, n_features), dtype=np.float32)
+        mask = np.zeros((batch_size, n_features), dtype=np.float32)
         joint = np.concatenate([feats_scaled, mask], axis=1)
         return torch.from_numpy(joint).float()
