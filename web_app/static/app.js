@@ -232,15 +232,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function getDisplayHR(r) {
         if (!r) return 75;
-        let hr = r.heart_rate;
-        if (hr != null) {
-            if (hr > 300) return Math.round(60000.0 / hr);
-            if (hr > 10 && hr <= 250) return Math.round(hr);
-        }
+        // Priority 1: Check biomarkers.RR_Mean which contains the measured cardiac cycle
         if (r.biomarkers && r.biomarkers.RR_Mean) {
-            let rr = r.biomarkers.RR_Mean;
-            if (rr > 0 && rr < 3.0) return Math.round(60.0 / rr);
-            if (rr >= 300) return Math.round(60000.0 / rr);
+            let rr = Number(r.biomarkers.RR_Mean);
+            if (rr > 0.25 && rr < 3.0) return Math.round(60.0 / rr);
+            if (rr >= 250 && rr <= 3000) return Math.round(60000.0 / rr);
+        }
+        let hr = Number(r.heart_rate);
+        if (!isNaN(hr) && hr > 0) {
+            if (hr >= 30 && hr <= 220) return Math.round(hr);
+            // If hr is scaled by 1000 (e.g., 76775 -> 76.775 -> 77)
+            if (hr >= 30000 && hr <= 220000) return Math.round(hr / 1000.0);
+            if (hr > 220 && hr < 3000) return Math.round(60000.0 / hr);
         }
         return 75;
     }

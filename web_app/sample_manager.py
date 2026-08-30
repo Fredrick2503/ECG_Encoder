@@ -54,9 +54,24 @@ class DatasetManager:
 
     def _load_catalog_and_embeddings(self):
         if self.catalog_file.exists():
-            with open(self.catalog_file, "r") as fp:
+            with open(self.catalog_file, "r", encoding="utf-8") as fp:
                 data = json.load(fp)
                 self._records = data.get("records", [])
+                for r in self._records:
+                    hr = r.get("heart_rate")
+                    rr = r.get("biomarkers", {}).get("RR_Mean", 0) if r.get("biomarkers") else 0
+                    if hr is not None and hr > 300:
+                        if 0.3 < rr < 3.0:
+                            r["heart_rate"] = int(round(60.0 / rr))
+                        elif rr >= 300:
+                            r["heart_rate"] = int(round(60000.0 / rr))
+                        else:
+                            r["heart_rate"] = int(round(60000.0 / hr))
+                    elif (hr is None or hr <= 10) and rr:
+                        if 0.3 < rr < 3.0:
+                            r["heart_rate"] = int(round(60.0 / rr))
+                        elif rr >= 300:
+                            r["heart_rate"] = int(round(60000.0 / rr))
                 self._population_points_tsne = data.get("population_points_tsne", data.get("population_points", []))
                 self._population_points_pca = data.get("population_points_pca", data.get("population_points", []))
                 self._population_points = self._population_points_tsne
