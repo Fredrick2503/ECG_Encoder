@@ -30,11 +30,23 @@ class BiomarkerService(BaseBiomarkerService):
     """
     def __init__(
         self,
-        imputer_path: Optional[Union[str, Path]] = "biomarkers/imputer.pkl",
-        scaler_path: Optional[Union[str, Path]] = "biomarkers/scaler.pkl"
+        imputer_path: Optional[Union[str, Path]] = None,
+        scaler_path: Optional[Union[str, Path]] = None
     ):
         self.imputer = None
         self.scaler = None
+
+        if imputer_path is None:
+            if os.path.exists("biomarkers/imputer_cwt.pkl"):
+                imputer_path = "biomarkers/imputer_cwt.pkl"
+            else:
+                imputer_path = "biomarkers/imputer.pkl"
+
+        if scaler_path is None:
+            if os.path.exists("biomarkers/scaler_cwt.pkl"):
+                scaler_path = "biomarkers/scaler_cwt.pkl"
+            else:
+                scaler_path = "biomarkers/scaler.pkl"
         
         if imputer_path and os.path.exists(imputer_path):
             with open(imputer_path, "rb") as f:
@@ -44,6 +56,14 @@ class BiomarkerService(BaseBiomarkerService):
             with open(scaler_path, "rb") as f:
                 self.scaler = pickle.load(f)
 
+    @property
+    def num_features(self) -> int:
+        if self.scaler is not None and hasattr(self.scaler, "n_features_in_"):
+            return self.scaler.n_features_in_
+        if self.imputer is not None and hasattr(self.imputer, "n_features_in_"):
+            return self.imputer.n_features_in_
+        return 24
+
     def extract_or_impute(
         self,
         signal: Optional[np.ndarray | torch.Tensor] = None,
@@ -51,26 +71,45 @@ class BiomarkerService(BaseBiomarkerService):
         batch_size: int = 1
     ) -> torch.Tensor:
         """
-        Formats or imputes raw clinical features into standard 50-dimensional input for AttentionMLPAutoencoder.
+        Formats or imputes raw clinical features into standard joint input for AttentionMLPAutoencoder.
         
         Args:
             signal: Optional raw signal.
-            raw_features: Optional pre-extracted 25-feature or 50-feature array.
+            raw_features: Optional pre-extracted feature array (24, 25, 48, or 50 dimensions).
             batch_size: Number of samples in batch.
             
         Returns:
-            torch.Tensor: Shape (batch_size, 50).
+            torch.Tensor: Shape (batch_size, 2 * num_features).
         """
+        target_n = self.num_features
         if raw_features is not None:
             feats = np.asarray(raw_features, dtype=np.float32)
             if feats.ndim == 1:
                 feats = feats.reshape(1, -1)
             
-            if feats.shape[1] == 50:
-                # Already joint 50-dim representation
-                return torch.from_numpy(feats).float()
-            elif feats.shape[1] == 25:
-                # Need imputation, scaling, and missingness mask
+            if feats.shape[1] in (48, 50):
+                if feats.shape[1] == target_n * 2:
+                    return torch.from_numpy(feats).float()
+                elif feats.shape[1] > target_n * 2:
+                    # Truncate
+                    feats_sub = np.concatenate([
+                        feats[:, :target_n],
+                        feats[:, feats.shape[1]//2 : feats.shape[1]//2 + target_n]
+                    ], axis=1)
+                    return torch.from_numpy(feats_sub).float()
+                else:
+                    # Pad
+                    pad_val = np.zeros((feats.shape[0], target_n * 2 - feats.shape[1]), dtype=np.float32)
+                    feats_padded = np.concatenate([feats, pad_val], axis=1)
+                    return torch.from_numpy(feats_padded).float()
+
+            if feats.shape[1] in (24, 25):
+                if feats.shape[1] > target_n:
+                    feats = feats[:, :target_n]
+                elif feats.shape[1] < target_n:
+                    pad_val = np.zeros((feats.shape[0], target_n - feats.shape[1]), dtype=np.float32)
+                    feats = np.concatenate([feats, pad_val], axis=1)
+
                 mask = (~np.isnan(feats)).astype(np.float32)
                 if self.imputer is not None:
                     feats_imp = self.imputer.transform(feats)
@@ -82,11 +121,11 @@ class BiomarkerService(BaseBiomarkerService):
                 else:
                     feats_scaled = feats_imp
                     
-                joint = np.concatenate([feats_scaled, mask], axis=1) # 50-D
+                joint = np.concatenate([feats_scaled, mask], axis=1) # 2 * target_n
                 return torch.from_numpy(joint.astype(np.float32)).float()
 
         # Fallback: create default zero/neutral feature vectors with missingness mask = 0
-        feats_scaled = np.zeros((batch_size, 25), dtype=np.float32)
-        mask = np.zeros((batch_size, 25), dtype=np.float32)
+        feats_scaled = np.zeros((batch_size, target_n), dtype=np.float32)
+        mask = np.zeros((batch_size, target_n), dtype=np.float32)
         joint = np.concatenate([feats_scaled, mask], axis=1)
         return torch.from_numpy(joint).float()

@@ -107,18 +107,30 @@ class BiomarkerEncoderWrapper(BaseEncoder):
     Wrapper for Attention MLP Biomarker Autoencoder.
     Outputs: z_biomarker in R^32.
     """
-    def __init__(self, model_path: Optional[Union[str, Path]] = "biomarkers/attention_mlp_best.pt", device: str = "cpu"):
+    def __init__(self, model_path: Optional[Union[str, Path]] = None, device: str = "cpu"):
         super().__init__()
         self._output_dim = 32
         self.device = device
-        self.model = AttentionMLPAutoencoder(input_dim=50, latent_dim=32).to(device)
+        
+        if model_path is None:
+            if os.path.exists("biomarkers/attention_mlp_cwt.pt"):
+                model_path = "biomarkers/attention_mlp_cwt.pt"
+            else:
+                model_path = "biomarkers/attention_mlp_best.pt"
+        
+        input_dim = 48 if (model_path and "cwt" in str(model_path).lower()) else 50
         
         if model_path and os.path.exists(model_path):
             try:
                 state_dict = torch.load(model_path, map_location=device, weights_only=False)
             except TypeError:
                 state_dict = torch.load(model_path, map_location=device)
+            if "bn.weight" in state_dict:
+                input_dim = state_dict["bn.weight"].shape[0]
+            self.model = AttentionMLPAutoencoder(input_dim=input_dim, latent_dim=32).to(device)
             self.model.load_state_dict(state_dict)
+        else:
+            self.model = AttentionMLPAutoencoder(input_dim=input_dim, latent_dim=32).to(device)
             
         self.model.eval()
         for p in self.model.parameters():

@@ -24,11 +24,11 @@ class EngineConfig:
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     temporal_model_path: Optional[str] = "models/C5_full_dataset.pt"
     morphology_model_path: Optional[str] = "models/morphology_encoder_v1.pt"
-    biomarker_model_path: Optional[str] = "biomarkers/attention_mlp_best.pt"
+    biomarker_model_path: Optional[str] = "biomarkers/attention_mlp_cwt.pt"
     classifier_model_path: Optional[str] = "models/classification_mlp.pt"
     thresholds_path: Optional[str] = "models/classification_mlp_thresholds.npy"
-    imputer_path: Optional[str] = "biomarkers/imputer.pkl"
-    scaler_path: Optional[str] = "biomarkers/scaler.pkl"
+    imputer_path: Optional[str] = "biomarkers/imputer_cwt.pkl"
+    scaler_path: Optional[str] = "biomarkers/scaler_cwt.pkl"
     class_names: List[str] = field(default_factory=lambda: list(DEFAULT_CLASS_NAMES))
     sampling_rate: int = 100
     target_length: int = 1000
