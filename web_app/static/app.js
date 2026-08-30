@@ -643,20 +643,30 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!biomarkerTableBody) return;
         const radarCanvas = document.getElementById("biomarkerRadarChart");
         const radarLabels = ["HRV SDNN", "QRS Duration", "QTc Bazett", "ST Deviation", "R Amplitude", "PR Interval"];
-        const sdnn = bio.SDNN || 35;
-        const qrs = bio.QRS_Duration || 90;
-        const qtc = bio.QTc_Bazett || 420;
-        const st = bio.ST_Deviation || 0;
-        const rAmp = bio.R_Amplitude || 1.2;
-        const pr = bio.PR_Interval || 160;
+        
+        // Auto-detect and convert seconds to milliseconds if < 2.0
+        const rawSdnn = bio.SDNN ?? 0.045;
+        const rawQrs = bio.QRS_Duration ?? 0.090;
+        const rawQtc = bio.QTc_Bazett ?? 0.410;
+        const rawPr = bio.PR_Interval ?? 0.160;
+        const rawSt = bio.ST_Deviation ?? 0.0;
+        const rawRAmp = bio.R_Amplitude ?? 1.1;
 
+        const sdnn = rawSdnn < 2.0 ? rawSdnn * 1000 : rawSdnn;
+        const qrs = rawQrs < 2.0 ? rawQrs * 1000 : rawQrs;
+        const qtc = rawQtc < 2.0 ? rawQtc * 1000 : rawQtc;
+        const pr = rawPr < 2.0 ? rawPr * 1000 : rawPr;
+        const st = rawSt;
+        const rAmp = rawRAmp;
+
+        // Proportional Radar Normalization (50% is standard physiological baseline)
         const patientVals = [
-            Math.min(100, (sdnn / 50) * 50),
-            Math.min(100, (qrs / 120) * 50),
-            Math.min(100, (qtc / 450) * 50),
-            Math.min(100, 50 + st * 40),
-            Math.min(100, (rAmp / 1.5) * 50),
-            Math.min(100, (pr / 200) * 50),
+            Math.max(10, Math.min(100, (sdnn / 50) * 50)),
+            Math.max(10, Math.min(100, (qrs / 90) * 50)),
+            Math.max(10, Math.min(100, (qtc / 410) * 50)),
+            Math.max(10, Math.min(100, 50 + st * 150)),
+            Math.max(10, Math.min(100, (rAmp / 1.0) * 50)),
+            Math.max(10, Math.min(100, (pr / 160) * 50)),
         ];
 
         if (radarCanvas && window.Chart) {
@@ -705,36 +715,57 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        // Clinical Evaluation Statuses
+        let qrsEval = '<span class="text-success">Normal (70–110 ms)</span>';
+        if (qrs > 120) qrsEval = '<span class="text-danger">Prolonged (Conduction Delay)</span>';
+        else if (qrs < 70) qrsEval = '<span class="text-warning">Narrow QRS</span>';
+
+        let qtcEval = '<span class="text-success">Normal (360–440 ms)</span>';
+        if (qtc > 460) qtcEval = '<span class="text-danger">Prolonged QTc</span>';
+        else if (qtc < 350) qtcEval = '<span class="text-warning">Short QTc</span>';
+
+        let stEval = '<span class="text-success">Isoelectric</span>';
+        if (st > 0.10) stEval = `<span class="text-danger">ST-Elevation (+${st.toFixed(2)} mV)</span>`;
+        else if (st < -0.08) stEval = `<span class="text-danger">ST-Depression (${st.toFixed(2)} mV)</span>`;
+
+        let prEval = '<span class="text-success">Normal</span>';
+        if (pr > 200) prEval = '<span class="text-danger">1st Degree AV Block</span>';
+        else if (pr < 110) prEval = '<span class="text-warning">Short PR (Pre-excitation)</span>';
+
+        let sdnnEval = '<span class="text-success">Intact Autonomic Tone</span>';
+        if (sdnn < 25) sdnnEval = '<span class="text-danger">Severely Depressed</span>';
+        else if (sdnn < 40) sdnnEval = '<span class="text-warning">Reduced HRV</span>';
+
         biomarkerTableBody.innerHTML = `
             <tr>
                 <td><strong>QRS Duration</strong></td>
                 <td>${qrs.toFixed(1)} ms</td>
                 <td>70 – 110 ms</td>
-                <td><span class="${qrs > 120 ? 'text-danger' : 'text-success'}">${qrs > 120 ? 'Prolonged (Conduction Delay)' : 'Normal'}</span></td>
+                <td>${qrsEval}</td>
             </tr>
             <tr>
                 <td><strong>QTc (Bazett)</strong></td>
                 <td>${qtc.toFixed(1)} ms</td>
                 <td>360 – 440 ms</td>
-                <td><span class="${qtc > 460 ? 'text-danger' : 'text-success'}">${qtc > 460 ? 'Prolonged' : 'Normal'}</span></td>
+                <td>${qtcEval}</td>
             </tr>
             <tr>
                 <td><strong>ST-Segment Deviation</strong></td>
                 <td>${st > 0 ? '+' : ''}${st.toFixed(2)} mV</td>
                 <td>-0.05 – +0.10 mV</td>
-                <td><span class="${Math.abs(st) > 0.15 ? 'text-danger' : 'text-success'}">${st > 0.15 ? 'ST Elevation' : (st < -0.1 ? 'ST Depression' : 'Isoelectric')}</span></td>
+                <td>${stEval}</td>
             </tr>
             <tr>
                 <td><strong>PR Interval</strong></td>
                 <td>${pr.toFixed(1)} ms</td>
                 <td>120 – 200 ms</td>
-                <td><span class="${pr > 200 ? 'text-danger' : 'text-success'}">${pr > 200 ? '1st Degree AV Block' : 'Normal'}</span></td>
+                <td>${prEval}</td>
             </tr>
             <tr>
                 <td><strong>SDNN (Autonomic HRV)</strong></td>
                 <td>${sdnn.toFixed(1)} ms</td>
                 <td>> 30.0 ms</td>
-                <td><span class="${sdnn < 20 ? 'text-danger' : 'text-success'}">${sdnn < 20 ? 'Reduced HRV' : 'Intact'}</span></td>
+                <td>${sdnnEval}</td>
             </tr>
         `;
     }
@@ -752,6 +783,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const record = (payload && payload.record) ? payload.record : allRecords.find(r => r.id === recordId);
             const probs = (payload && payload.model_confidences && payload.model_confidences["Fusion (Joint)"]) ? payload.model_confidences["Fusion (Joint)"] : { NORM: 20, MI: 20, STTC: 20, CD: 20, HYP: 20 };
 
+            const rawBio = (payload && payload.biomarkers) ? payload.biomarkers : {};
+            const cleanBio = {
+                QRS_Duration_ms: ((rawBio.QRS_Duration ?? 0.09) < 2.0 ? (rawBio.QRS_Duration ?? 0.09) * 1000 : (rawBio.QRS_Duration ?? 90)).toFixed(1) + " ms",
+                QTc_Bazett_ms: ((rawBio.QTc_Bazett ?? 0.41) < 2.0 ? (rawBio.QTc_Bazett ?? 0.41) * 1000 : (rawBio.QTc_Bazett ?? 410)).toFixed(1) + " ms",
+                PR_Interval_ms: ((rawBio.PR_Interval ?? 0.16) < 2.0 ? (rawBio.PR_Interval ?? 0.16) * 1000 : (rawBio.PR_Interval ?? 160)).toFixed(1) + " ms",
+                ST_Deviation_mV: (rawBio.ST_Deviation ?? 0.0).toFixed(2) + " mV",
+                SDNN_ms: ((rawBio.SDNN ?? 0.045) < 2.0 ? (rawBio.SDNN ?? 0.045) * 1000 : (rawBio.SDNN ?? 45)).toFixed(1) + " ms",
+                R_Amplitude_mV: (rawBio.R_Amplitude ?? 1.1).toFixed(2) + " mV"
+            };
+
             const res = await fetch("/api/interpret", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -766,7 +807,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         HYP: (probs.HYP || 0) / 100,
                     },
                     thresholds: { NORM: 0.53, MI: 0.26, STTC: 0.25, CD: 0.30, HYP: 0.33 },
-                    biomarkers: (payload && payload.biomarkers) ? payload.biomarkers : {},
+                    biomarkers: cleanBio,
                     patient_metadata: {
                         Age: record ? record.age : 60,
                         Sex: record ? record.sex : "Unknown",

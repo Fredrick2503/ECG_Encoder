@@ -89,7 +89,7 @@ Detailed analysis of the ECG waveform contours, interval durations (PR, QRS, QT/
 Explanation of the underlying cardiac cellular/conduction mechanisms driving these findings.
 
 ### 4. Multimodal AI Representation Insights
-Discuss why fusing 1D temporal wave dynamics, 2D time-frequency morphology, and 60 clinical biomarkers provides high diagnostic confidence for this record.
+Discuss why fusing 1D temporal wave dynamics (z_t ∈ ℝ⁵¹²), 2D time-frequency morphology (z_m ∈ ℝ⁵¹²), and 60 clinical biomarkers (z_b ∈ ℝ³²) into a 1056-D representation provides high diagnostic confidence for this record. Use clean Unicode formatting for math symbols (e.g. ℝ, ∈, ⁵¹², ³, ²) rather than raw unrendered LaTeX markers.
 
 ### 5. Recommended Clinical Next Steps
 Actionable next steps (e.g., serial troponins, echocardiography, Holter monitoring, electrophysiology consult, urgent cardiology referral).
@@ -170,9 +170,9 @@ In the presence of **{conditions_str}**, localized repolarization or conduction 
 
 ### 4. Multimodal AI Representation Insights
 The unified 1056-D latent vector integrates:
-1. **Temporal Dynamics ($z_t \in \mathbb{{R}}^{{512}}$)**: High-resolution inter-beat recurrence.
-2. **Morphology ($z_m \in \mathbb{{R}}^{{512}}$)**: 2D time-frequency wave contours and spectral magnitude.
-3. **Biomarkers ($z_b \in \mathbb{{R}}^{{32}}$)**: Clinical cardiac intervals and autonomic HRV indices.
+1. **Temporal Dynamics (z<sub>t</sub> ∈ ℝ⁵¹²)**: High-resolution inter-beat recurrence.
+2. **Morphology (z<sub>m</sub> ∈ ℝ⁵¹²)**: 2D time-frequency wave contours and spectral magnitude.
+3. **Biomarkers (z<sub>b</sub> ∈ ℝ³²)**: Clinical cardiac intervals and autonomic HRV indices.
 
 ### 5. Recommended Clinical Next Steps
 - Correlate with patient symptoms (chest discomfort, palpitations, dyspnea).

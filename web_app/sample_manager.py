@@ -43,6 +43,7 @@ class DatasetManager:
             
         self._records = []
         self._population_points = []
+        self._sample_cache = {}
         self._load_catalog_and_embeddings()
         
         # Load Frozen Models
@@ -120,8 +121,11 @@ class DatasetManager:
     def generate_full_sample_payload(self, record_id: str) -> Dict[str, Any]:
         """
         Loads the real WFDB ECG waveform and executes genuine model inference,
-        Integrated Gradients, Grad-CAM, and landmark translation.
+        Integrated Gradients, Grad-CAM, and landmark translation (with memory cache).
         """
+        if record_id in self._sample_cache:
+            return self._sample_cache[record_id]
+
         record = next((r for r in self._records if r["id"] == record_id or r["sample_code"] == record_id or str(r.get("ecg_id")) == str(record_id)), None)
         if record is None and len(self._records) > 0:
             record = self._records[0]
@@ -200,10 +204,7 @@ class DatasetManager:
         except Exception as e:
             print(f"[!] Translator overlap notice: {e}")
 
-        # 5. Model Confidence Levels
-        model_confidences = self._compute_model_confidences(signal_tensor, cat)
-
-        return {
+        result = {
             "record": record,
             "leads": LEAD_NAMES,
             "signal": signal.tolist(),
@@ -213,6 +214,14 @@ class DatasetManager:
             "model_confidences": model_confidences,
             "biomarkers": record.get("biomarkers", {})
         }
+        
+        self._sample_cache[record_id] = result
+        if record.get("id"):
+            self._sample_cache[record["id"]] = result
+        if record.get("sample_code"):
+            self._sample_cache[record["sample_code"]] = result
+            
+        return result
 
     def _compute_model_confidences(self, signal_tensor: torch.Tensor, cat: str) -> Dict[str, Dict[str, float]]:
         conf = {}
