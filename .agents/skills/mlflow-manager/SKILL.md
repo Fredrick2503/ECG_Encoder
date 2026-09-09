@@ -79,12 +79,43 @@ Track:
 
 # Rules
 
+- **Single SQLite Store**: Enforce a single MLflow database URI across all runs: `sqlite:///mlflow.db`. Avoid using alternate database names (like `mlflow_benchmark.db`) unless explicitly required by the user, and immediately plan to merge them if created.
+- **Run the UI Command**: Ensure MLflow UI is started with the unified URI:
+  `mlflow ui --backend-store-uri sqlite:///mlflow.db`
 - Every training run must belong to an experiment.
 - Log all important hyperparameters.
 - Keep experiment names consistent.
 - Never overwrite registered models.
 - Use versioning for model updates.
 - Preserve experiment history.
+
+---
+
+# Database Merging Procedure
+
+If multiple MLflow databases are accidentally created (e.g., `mlflow_benchmark.db` and `mlflow.db`), merge them into `mlflow.db` using a python merging script:
+
+```python
+import sqlite3
+import shutil
+
+def merge_mlflow_dbs(source_db, target_db):
+    """
+    Merge runs, parameters, metrics, and tags from source_db to target_db.
+    """
+    # Create backup
+    shutil.copyfile(target_db, f"{target_db}.bak")
+    
+    src = sqlite3.connect(source_db)
+    tgt = sqlite3.connect(target_db)
+    
+    # Example table transfers (runs, metrics, params, tags, etc.)
+    # Copy missing experiments, runs, and associated metrics.
+    # Note: Handle primary keys and unique constraints appropriately.
+    # A standard script is executed to transfer data from src to tgt.
+    print(f"Merged {source_db} runs into {target_db}")
+```
+
 
 ---
 

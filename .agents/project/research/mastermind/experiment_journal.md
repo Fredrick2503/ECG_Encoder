@@ -2120,3 +2120,1184 @@ The following results are known from prior experiments (before MasterMind loop):
 | STTC | 0.8341 | 0.5385 | 0.5185 | 0.9106 |
 | CD | 0.8672 | 0.5753 | 0.7778 | 0.7967 |
 | HYP | 0.6612 | 0.1923 | 0.4545 | 0.7410 |
+
+---
+
+### Trial: T30_large_transformer
+
+**Date:** 2026-08-09 19:49  
+**Status:** COMPLETED  
+**MLflow Run ID:** `7b6ccb45887d48059ffe095df8bdd2b2`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer_large |
+| Filter Config | bandpass_notch |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 15 |
+| Training Time | 2324s |
+
+**Reason for this configuration:**  
+> Bandpass + 60Hz notch filter. Adds powerline interference removal — critical for clinical recordings in North America. Recommended by AHA guidelines.
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8013 |
+| Macro F1 | 0.5057 |
+| Subset Accuracy | 0.4467 |
+| Hamming Loss | 0.2200 |
+| Macro Sensitivity | 0.5948 |
+| Macro Specificity | 0.7924 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8882 | 0.8072 | 0.9306 | 0.6538 |
+| MI | 0.8034 | 0.5806 | 0.6429 | 0.7778 |
+| STTC | 0.7955 | 0.3922 | 0.3704 | 0.8862 |
+| CD | 0.8332 | 0.5625 | 0.6667 | 0.8455 |
+| HYP | 0.6861 | 0.1860 | 0.3636 | 0.7986 |
+
+---
+
+### Trial: T31_deep_resnet
+
+**Date:** 2026-08-09 20:05  
+**Status:** COMPLETED  
+**MLflow Run ID:** `8ad260fb46a246bc8be8d2985683b3cb`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | resnet_se_deep |
+| Filter Config | full_stack |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 11 |
+| Training Time | 867s |
+
+**Reason for this configuration:**  
+> Maximum denoising: Butterworth + Notch + Wavelet. Stacks all proven methods. Risk: may over-smooth subtle pathological waveforms. Trade-off experiment.
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8254 |
+| Macro F1 | 0.5715 |
+| Subset Accuracy | 0.5133 |
+| Hamming Loss | 0.1600 |
+| Macro Sensitivity | 0.6067 |
+| Macro Specificity | 0.8653 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9065 | 0.8258 | 0.8889 | 0.7564 |
+| MI | 0.8038 | 0.6222 | 0.6667 | 0.8148 |
+| STTC | 0.8350 | 0.5000 | 0.4444 | 0.9268 |
+| CD | 0.8832 | 0.7187 | 0.8519 | 0.8862 |
+| HYP | 0.6985 | 0.1905 | 0.1818 | 0.9424 |
+
+---
+
+### Trial: T32_low_dropout
+
+**Date:** 2026-08-09 20:32  
+**Status:** COMPLETED  
+**MLflow Run ID:** `99657f1b4b8a4e31bbf6285d71153161`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass_notch |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 13 |
+| Training Time | 1553s |
+
+**Reason for this configuration:**  
+> Bandpass + 60Hz notch filter. Adds powerline interference removal — critical for clinical recordings in North America. Recommended by AHA guidelines.
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8078 |
+| Macro F1 | 0.5068 |
+| Subset Accuracy | 0.4133 |
+| Hamming Loss | 0.2133 |
+| Macro Sensitivity | 0.5592 |
+| Macro Specificity | 0.8258 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8917 | 0.8267 | 0.8611 | 0.7949 |
+| MI | 0.7780 | 0.5217 | 0.5714 | 0.7593 |
+| STTC | 0.8202 | 0.4082 | 0.3704 | 0.9024 |
+| CD | 0.8636 | 0.6071 | 0.6296 | 0.9024 |
+| HYP | 0.6854 | 0.1702 | 0.3636 | 0.7698 |
+
+---
+
+### Trial: T33_onecycle_lr
+
+**Date:** 2026-08-09 21:11  
+**Status:** COMPLETED  
+**MLflow Run ID:** `d20a65d1495941c995eaf1cdce89888f`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass_notch |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 9 |
+| Training Time | 2290s |
+
+**Reason for this configuration:**  
+> Bandpass + 60Hz notch filter. Adds powerline interference removal — critical for clinical recordings in North America. Recommended by AHA guidelines.
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8209 |
+| Macro F1 | 0.4668 |
+| Subset Accuracy | 0.4467 |
+| Hamming Loss | 0.2133 |
+| Macro Sensitivity | 0.5319 |
+| Macro Specificity | 0.8065 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9014 | 0.7719 | 0.9167 | 0.5769 |
+| MI | 0.8155 | 0.5500 | 0.5238 | 0.8519 |
+| STTC | 0.8142 | 0.2667 | 0.2222 | 0.9024 |
+| CD | 0.8630 | 0.5789 | 0.8148 | 0.7805 |
+| HYP | 0.7103 | 0.1667 | 0.1818 | 0.9209 |
+
+---
+
+### Trial: T34_reduce_plateau
+
+**Date:** 2026-08-09 22:00  
+**Status:** COMPLETED  
+**MLflow Run ID:** `f4edb0b160be496590d1dab145a806e3`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass_notch |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 15 |
+| Training Time | 2901s |
+
+**Reason for this configuration:**  
+> Bandpass + 60Hz notch filter. Adds powerline interference removal — critical for clinical recordings in North America. Recommended by AHA guidelines.
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8065 |
+| Macro F1 | 0.5225 |
+| Subset Accuracy | 0.4733 |
+| Hamming Loss | 0.1920 |
+| Macro Sensitivity | 0.5418 |
+| Macro Specificity | 0.8471 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8846 | 0.8050 | 0.8889 | 0.7051 |
+| MI | 0.7934 | 0.5974 | 0.5476 | 0.8889 |
+| STTC | 0.8458 | 0.4912 | 0.5185 | 0.8699 |
+| CD | 0.8293 | 0.5652 | 0.4815 | 0.9512 |
+| HYP | 0.6795 | 0.1538 | 0.2727 | 0.8201 |
+
+---
+
+### Trial: T35_warmup_cosine
+
+**Date:** 2026-08-09 23:11  
+**Status:** COMPLETED  
+**MLflow Run ID:** `e173272c8cae4ce388c231a4b957d31a`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass_notch |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 13 |
+| Training Time | 258s |
+
+**Reason for this configuration:**  
+> Bandpass + 60Hz notch filter. Adds powerline interference removal — critical for clinical recordings in North America. Recommended by AHA guidelines.
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.7660 |
+| Macro F1 | 0.4675 |
+| Subset Accuracy | 0.3800 |
+| Hamming Loss | 0.2853 |
+| Macro Sensitivity | 0.6279 |
+| Macro Specificity | 0.7070 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8855 | 0.7901 | 0.8889 | 0.6667 |
+| MI | 0.8011 | 0.5833 | 0.8333 | 0.6019 |
+| STTC | 0.7431 | 0.3051 | 0.3333 | 0.8130 |
+| CD | 0.7980 | 0.5075 | 0.6296 | 0.8130 |
+| HYP | 0.6024 | 0.1515 | 0.4545 | 0.6403 |
+
+---
+
+### Trial: A1_transformer_asl
+
+**Date:** 2026-08-12 11:33  
+**Status:** COMPLETED  
+**MLflow Run ID:** `5f7146f2ac2a4b668aeb864ec48641cb`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 1 |
+| Training Time | 15s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.5774 |
+| Macro F1 | 0.3586 |
+| Subset Accuracy | 0.0000 |
+| Hamming Loss | 0.7120 |
+| Macro Sensitivity | 0.8909 |
+| Macro Specificity | 0.0632 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8301 | 0.6486 | 1.0000 | 0.0000 |
+| MI | 0.6728 | 0.4375 | 1.0000 | 0.0000 |
+| STTC | 0.6161 | 0.3176 | 1.0000 | 0.0569 |
+| CD | 0.4770 | 0.3051 | 1.0000 | 0.0000 |
+| HYP | 0.2910 | 0.0840 | 0.4545 | 0.2590 |
+
+---
+
+### Trial: A2_transformer_focal_g1
+
+**Date:** 2026-08-12 11:34  
+**Status:** COMPLETED  
+**MLflow Run ID:** `632f4ba6ba4c4ce98aa022dd25e3bd8f`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | focal_g1 |
+| Best Epoch | 1 |
+| Training Time | 9s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.5125 |
+| Macro F1 | 0.3666 |
+| Subset Accuracy | 0.0000 |
+| Hamming Loss | 0.7613 |
+| Macro Sensitivity | 1.0000 |
+| Macro Specificity | 0.0000 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.3745 | 0.6486 | 1.0000 | 0.0000 |
+| MI | 0.6334 | 0.4375 | 1.0000 | 0.0000 |
+| STTC | 0.5429 | 0.3051 | 1.0000 | 0.0000 |
+| CD | 0.3761 | 0.3051 | 1.0000 | 0.0000 |
+| HYP | 0.6357 | 0.1366 | 1.0000 | 0.0000 |
+
+---
+
+### Trial: A1_transformer_asl
+
+**Date:** 2026-08-12 12:26  
+**Status:** COMPLETED  
+**MLflow Run ID:** `37d38bb15119486c904d3cd3e4dad153`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 14 |
+| Training Time | 2765s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8630 |
+| Macro F1 | 0.6362 |
+| Subset Accuracy | 0.5033 |
+| Hamming Loss | 0.1593 |
+| Macro Sensitivity | 0.6774 |
+| Macro Specificity | 0.8530 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9130 | 0.8162 | 0.9562 | 0.6748 |
+| MI | 0.8362 | 0.6135 | 0.6849 | 0.8238 |
+| STTC | 0.9093 | 0.6897 | 0.6557 | 0.9372 |
+| CD | 0.9011 | 0.6923 | 0.7031 | 0.9110 |
+| HYP | 0.7556 | 0.3692 | 0.3871 | 0.9182 |
+
+---
+
+### Trial: A2_transformer_focal_g1
+
+**Date:** 2026-08-12 12:42  
+**Status:** COMPLETED  
+**MLflow Run ID:** `2080b3c766cd48b6b04313b0ccb4cb18`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | focal_g1 |
+| Best Epoch | 16 |
+| Training Time | 860s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8488 |
+| Macro F1 | 0.6164 |
+| Subset Accuracy | 0.4767 |
+| Hamming Loss | 0.1807 |
+| Macro Sensitivity | 0.7022 |
+| Macro Specificity | 0.8379 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9189 | 0.8299 | 0.8905 | 0.7853 |
+| MI | 0.8355 | 0.6000 | 0.6164 | 0.8590 |
+| STTC | 0.8994 | 0.6164 | 0.7377 | 0.8326 |
+| CD | 0.8793 | 0.7059 | 0.7500 | 0.8983 |
+| HYP | 0.7111 | 0.3299 | 0.5161 | 0.8141 |
+
+---
+
+### Trial: A3_transformer_cb_loss
+
+**Date:** 2026-08-12 13:05  
+**Status:** COMPLETED  
+**MLflow Run ID:** `126590f1befe41da984901ef73876267`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | cb_loss |
+| Best Epoch | 18 |
+| Training Time | 1335s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8441 |
+| Macro F1 | 0.6099 |
+| Subset Accuracy | 0.4667 |
+| Hamming Loss | 0.1820 |
+| Macro Sensitivity | 0.6881 |
+| Macro Specificity | 0.8301 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9108 | 0.8232 | 0.9343 | 0.7178 |
+| MI | 0.8420 | 0.6272 | 0.7260 | 0.8106 |
+| STTC | 0.8914 | 0.5882 | 0.6557 | 0.8536 |
+| CD | 0.8744 | 0.6777 | 0.6406 | 0.9322 |
+| HYP | 0.7018 | 0.3333 | 0.4839 | 0.8364 |
+
+---
+
+### Trial: A4_transformer_sqrt_bce
+
+**Date:** 2026-08-12 13:29  
+**Status:** COMPLETED  
+**MLflow Run ID:** `5b52f696d86c44ad815c168e5ecf589d`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | transformer |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | bce_sqrt_freq |
+| Best Epoch | 16 |
+| Training Time | 1336s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8473 |
+| Macro F1 | 0.6230 |
+| Subset Accuracy | 0.5033 |
+| Hamming Loss | 0.1673 |
+| Macro Sensitivity | 0.6624 |
+| Macro Specificity | 0.8573 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9120 | 0.8141 | 0.9270 | 0.7055 |
+| MI | 0.8256 | 0.5986 | 0.6027 | 0.8678 |
+| STTC | 0.9059 | 0.6721 | 0.6721 | 0.9163 |
+| CD | 0.8728 | 0.6667 | 0.5937 | 0.9492 |
+| HYP | 0.7204 | 0.3636 | 0.5161 | 0.8476 |
+
+---
+
+### Trial: A5_resnet_se_asl
+
+**Date:** 2026-08-12 13:41  
+**Status:** COMPLETED  
+**MLflow Run ID:** `5d96acc97f304dfda9fc55dc510ac129`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | resnet_se |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 4 |
+| Training Time | 676s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8635 |
+| Macro F1 | 0.6555 |
+| Subset Accuracy | 0.5500 |
+| Hamming Loss | 0.1473 |
+| Macro Sensitivity | 0.6924 |
+| Macro Specificity | 0.8719 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9311 | 0.8442 | 0.9489 | 0.7485 |
+| MI | 0.8616 | 0.6452 | 0.6849 | 0.8590 |
+| STTC | 0.9225 | 0.7167 | 0.7049 | 0.9331 |
+| CD | 0.8574 | 0.6825 | 0.6719 | 0.9195 |
+| HYP | 0.7449 | 0.3889 | 0.4516 | 0.8996 |
+
+---
+
+### Trial: A6_resnet_se_focal_g1
+
+**Date:** 2026-08-12 14:00  
+**Status:** COMPLETED  
+**MLflow Run ID:** `39e6afe2d90e4e05b010c34f275acfe7`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | resnet_se |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | focal_g1 |
+| Best Epoch | 11 |
+| Training Time | 1033s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8242 |
+| Macro F1 | 0.6100 |
+| Subset Accuracy | 0.5000 |
+| Hamming Loss | 0.1720 |
+| Macro Sensitivity | 0.6552 |
+| Macro Specificity | 0.8442 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8687 | 0.8025 | 0.9343 | 0.6687 |
+| MI | 0.7902 | 0.6024 | 0.6849 | 0.8106 |
+| STTC | 0.8988 | 0.6917 | 0.7541 | 0.8912 |
+| CD | 0.8287 | 0.5841 | 0.5156 | 0.9322 |
+| HYP | 0.7344 | 0.3692 | 0.3871 | 0.9182 |
+
+---
+
+### Trial: A7_resnet_se_cb_loss
+
+**Date:** 2026-08-12 14:15  
+**Status:** COMPLETED  
+**MLflow Run ID:** `e729259f3c3041d99cc77f6f58eac2e7`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | resnet_se |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | cb_loss |
+| Best Epoch | 8 |
+| Training Time | 824s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8509 |
+| Macro F1 | 0.5911 |
+| Subset Accuracy | 0.5100 |
+| Hamming Loss | 0.1707 |
+| Macro Sensitivity | 0.6195 |
+| Macro Specificity | 0.8728 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9116 | 0.8179 | 0.8686 | 0.7853 |
+| MI | 0.8155 | 0.5082 | 0.4247 | 0.9207 |
+| STTC | 0.9130 | 0.6842 | 0.8525 | 0.8368 |
+| CD | 0.8704 | 0.5766 | 0.5000 | 0.9364 |
+| HYP | 0.7437 | 0.3684 | 0.4516 | 0.8848 |
+
+---
+
+### Trial: A8_resnet_se_sqrt_bce
+
+**Date:** 2026-08-12 14:27  
+**Status:** COMPLETED  
+**MLflow Run ID:** `e8af527cb78f424494e62e5bd5a64fe4`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | resnet_se |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | bce_sqrt_freq |
+| Best Epoch | 4 |
+| Training Time | 620s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8528 |
+| Macro F1 | 0.6226 |
+| Subset Accuracy | 0.4667 |
+| Hamming Loss | 0.1867 |
+| Macro Sensitivity | 0.7445 |
+| Macro Specificity | 0.8120 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9159 | 0.8243 | 0.8905 | 0.7730 |
+| MI | 0.8221 | 0.5949 | 0.7945 | 0.7181 |
+| STTC | 0.9261 | 0.6538 | 0.8361 | 0.8159 |
+| CD | 0.8640 | 0.6667 | 0.7500 | 0.8644 |
+| HYP | 0.7361 | 0.3733 | 0.4516 | 0.8885 |
+
+---
+
+### Trial: A9_multiscale_cnn_asl
+
+**Date:** 2026-08-12 14:44  
+**Status:** COMPLETED  
+**MLflow Run ID:** `d8264eafc18948c885d664cedd9fa4ce`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | multiscale_cnn |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 13 |
+| Training Time | 972s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8035 |
+| Macro F1 | 0.5612 |
+| Subset Accuracy | 0.4067 |
+| Hamming Loss | 0.2220 |
+| Macro Sensitivity | 0.6910 |
+| Macro Specificity | 0.7715 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8822 | 0.8050 | 0.9489 | 0.6564 |
+| MI | 0.7394 | 0.4762 | 0.5479 | 0.7577 |
+| STTC | 0.8934 | 0.5746 | 0.8525 | 0.7155 |
+| CD | 0.8106 | 0.6259 | 0.7187 | 0.8432 |
+| HYP | 0.6920 | 0.3243 | 0.3871 | 0.8848 |
+
+---
+
+### Trial: A10_multiscale_cnn_focal_g1
+
+**Date:** 2026-08-12 15:03  
+**Status:** COMPLETED  
+**MLflow Run ID:** `eeb4574bbf47475997146337316ac9db`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | multiscale_cnn |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | focal_g1 |
+| Best Epoch | 14 |
+| Training Time | 1074s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.7804 |
+| Macro F1 | 0.5559 |
+| Subset Accuracy | 0.3967 |
+| Hamming Loss | 0.2500 |
+| Macro Sensitivity | 0.7396 |
+| Macro Specificity | 0.7270 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8839 | 0.8127 | 0.9343 | 0.6933 |
+| MI | 0.7726 | 0.5400 | 0.7397 | 0.6784 |
+| STTC | 0.7953 | 0.5200 | 0.8525 | 0.6360 |
+| CD | 0.7690 | 0.5269 | 0.6875 | 0.7500 |
+| HYP | 0.6810 | 0.3797 | 0.4839 | 0.8773 |
+
+---
+
+### Trial: A11_multiscale_cnn_cb_loss
+
+**Date:** 2026-08-12 15:23  
+**Status:** COMPLETED  
+**MLflow Run ID:** `f57d9449008548a393c91800fb4d39cf`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | multiscale_cnn |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | cb_loss |
+| Best Epoch | 17 |
+| Training Time | 1120s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8176 |
+| Macro F1 | 0.5875 |
+| Subset Accuracy | 0.4600 |
+| Hamming Loss | 0.2053 |
+| Macro Sensitivity | 0.7058 |
+| Macro Specificity | 0.7964 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9020 | 0.8243 | 0.9416 | 0.7117 |
+| MI | 0.7674 | 0.5311 | 0.6438 | 0.7489 |
+| STTC | 0.8966 | 0.6486 | 0.7869 | 0.8368 |
+| CD | 0.8226 | 0.5857 | 0.6406 | 0.8517 |
+| HYP | 0.6994 | 0.3478 | 0.5161 | 0.8327 |
+
+---
+
+### Trial: A12_multiscale_cnn_sqrt_bce
+
+**Date:** 2026-08-12 18:24  
+**Status:** COMPLETED  
+**MLflow Run ID:** `fb3bd1ada46c4507935d9141667d1f48`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | multiscale_cnn |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | bce_sqrt_freq |
+| Best Epoch | 20 |
+| Training Time | 10799s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8180 |
+| Macro F1 | 0.5970 |
+| Subset Accuracy | 0.4367 |
+| Hamming Loss | 0.1953 |
+| Macro Sensitivity | 0.6965 |
+| Macro Specificity | 0.8164 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9057 | 0.8322 | 0.9051 | 0.7730 |
+| MI | 0.7587 | 0.5000 | 0.6027 | 0.7401 |
+| STTC | 0.9013 | 0.6577 | 0.8033 | 0.8368 |
+| CD | 0.8030 | 0.6423 | 0.6875 | 0.8771 |
+| HYP | 0.7213 | 0.3529 | 0.4839 | 0.8550 |
+
+---
+
+### Trial: T_ENSEMBLE_FINAL
+
+**Date:** 2026-08-12 18:25  
+**Status:** COMPLETED  
+**MLflow Run ID:** `44c31f43aae348808eee508a97dabaca`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | ensemble |
+| Filter Config | mixed |
+| Balance Mode | mixed |
+| Loss Function | mixed |
+| Best Epoch | - |
+| Training Time | -s |
+
+**Reason for this configuration:**  
+> 
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8610 |
+| Macro F1 | 0.6353 |
+| Subset Accuracy | 0.5367 |
+| Hamming Loss | 0.1447 |
+| Macro Sensitivity | 0.6223 |
+| Macro Specificity | 0.9048 |
+
+**Per-Class Metrics:**
+| CD | 0.8640 | 0.6667 | 0.7500 | 0.8644 |
+| HYP | 0.7361 | 0.3733 | 0.4516 | 0.8885 |
+
+---
+
+### Trial: A9_multiscale_cnn_asl
+
+**Date:** 2026-08-12 14:44  
+**Status:** COMPLETED  
+**MLflow Run ID:** `d8264eafc18948c885d664cedd9fa4ce`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | multiscale_cnn |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | asl |
+| Best Epoch | 13 |
+| Training Time | 972s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8035 |
+| Macro F1 | 0.5612 |
+| Subset Accuracy | 0.4067 |
+| Hamming Loss | 0.2220 |
+| Macro Sensitivity | 0.6910 |
+| Macro Specificity | 0.7715 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8822 | 0.8050 | 0.9489 | 0.6564 |
+| MI | 0.7394 | 0.4762 | 0.5479 | 0.7577 |
+| STTC | 0.8934 | 0.5746 | 0.8525 | 0.7155 |
+| CD | 0.8106 | 0.6259 | 0.7187 | 0.8432 |
+| HYP | 0.6920 | 0.3243 | 0.3871 | 0.8848 |
+
+---
+
+### Trial: A10_multiscale_cnn_focal_g1
+
+**Date:** 2026-08-12 15:03  
+**Status:** COMPLETED  
+**MLflow Run ID:** `eeb4574bbf47475997146337316ac9db`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | multiscale_cnn |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | focal_g1 |
+| Best Epoch | 14 |
+| Training Time | 1074s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.7804 |
+| Macro F1 | 0.5559 |
+| Subset Accuracy | 0.3967 |
+| Hamming Loss | 0.2500 |
+| Macro Sensitivity | 0.7396 |
+| Macro Specificity | 0.7270 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.8839 | 0.8127 | 0.9343 | 0.6933 |
+| MI | 0.7726 | 0.5400 | 0.7397 | 0.6784 |
+| STTC | 0.7953 | 0.5200 | 0.8525 | 0.6360 |
+| CD | 0.7690 | 0.5269 | 0.6875 | 0.7500 |
+| HYP | 0.6810 | 0.3797 | 0.4839 | 0.8773 |
+
+---
+
+### Trial: A11_multiscale_cnn_cb_loss
+
+**Date:** 2026-08-12 15:23  
+**Status:** COMPLETED  
+**MLflow Run ID:** `f57d9449008548a393c91800fb4d39cf`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | multiscale_cnn |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | cb_loss |
+| Best Epoch | 17 |
+| Training Time | 1120s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8176 |
+| Macro F1 | 0.5875 |
+| Subset Accuracy | 0.4600 |
+| Hamming Loss | 0.2053 |
+| Macro Sensitivity | 0.7058 |
+| Macro Specificity | 0.7964 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9020 | 0.8243 | 0.9416 | 0.7117 |
+| MI | 0.7674 | 0.5311 | 0.6438 | 0.7489 |
+| STTC | 0.8966 | 0.6486 | 0.7869 | 0.8368 |
+| CD | 0.8226 | 0.5857 | 0.6406 | 0.8517 |
+| HYP | 0.6994 | 0.3478 | 0.5161 | 0.8327 |
+
+---
+
+### Trial: A12_multiscale_cnn_sqrt_bce
+
+**Date:** 2026-08-12 18:24  
+**Status:** COMPLETED  
+**MLflow Run ID:** `fb3bd1ada46c4507935d9141667d1f48`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | multiscale_cnn |
+| Filter Config | bandpass |
+| Balance Mode | none |
+| Loss Function | bce_sqrt_freq |
+| Best Epoch | 20 |
+| Training Time | 10799s |
+
+**Reason for this configuration:**  
+> Standard clinical ECG preprocessing (0.5-40 Hz). Removes baseline wander (<0.5 Hz) and high-freq EMG noise (>40 Hz). Most commonly used in literature (Hannun et al., 2019; Ribeiro et al., 2020).
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8180 |
+| Macro F1 | 0.5970 |
+| Subset Accuracy | 0.4367 |
+| Hamming Loss | 0.1953 |
+| Macro Sensitivity | 0.6965 |
+| Macro Specificity | 0.8164 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9057 | 0.8322 | 0.9051 | 0.7730 |
+| MI | 0.7587 | 0.5000 | 0.6027 | 0.7401 |
+| STTC | 0.9013 | 0.6577 | 0.8033 | 0.8368 |
+| CD | 0.8030 | 0.6423 | 0.6875 | 0.8771 |
+| HYP | 0.7213 | 0.3529 | 0.4839 | 0.8550 |
+
+---
+
+### Trial: T_ENSEMBLE_FINAL
+
+**Date:** 2026-08-12 18:25  
+**Status:** COMPLETED  
+**MLflow Run ID:** `44c31f43aae348808eee508a97dabaca`
+
+**Configuration:**
+| Parameter | Value |
+|---|---|
+| Architecture | ensemble |
+| Filter Config | mixed |
+| Balance Mode | mixed |
+| Loss Function | mixed |
+| Best Epoch | - |
+| Training Time | -s |
+
+**Reason for this configuration:**  
+> 
+
+**Results:**
+| Metric | Value |
+|---|---|
+| Macro ROC-AUC | 0.8610 |
+| Macro F1 | 0.6353 |
+| Subset Accuracy | 0.5367 |
+| Hamming Loss | 0.1447 |
+| Macro Sensitivity | 0.6223 |
+| Macro Specificity | 0.9048 |
+
+**Per-Class Metrics:**
+| Class | AUC | F1 | Sensitivity | Specificity |
+|---|---|---|---|---|
+| NORM | 0.9187 | 0.8362 | 0.8759 | 0.8160 |
+| MI | 0.8367 | 0.5161 | 0.4384 | 0.9163 |
+| STTC | 0.9248 | 0.7049 | 0.7049 | 0.9247 |
+
+### Benchmark Suite B: Decision Threshold Optimization Study (B1–B6)
+
+**Date:** 2026-08-13  
+**Status:** COMPLETED  
+**Experiment:** `ECG_Benchmark_Suite_B`  
+**Dataset:** PTB-XL (2K subset, Seed 42, trained from scratch)
+
+#### Summary of Benchmark Suite B:
+| ID | Architecture | Loss | Threshold | AUC | Macro F1 | Subset Acc | Sensitivity | Specificity | Purpose |
+|---|---|---|---|---|---|---|---|---|---|
+| B1 | ResNet-SE | ASL | 0.5 | 0.8512 | 0.5296 | 0.1200 | 0.7783 | 0.6529 | Reproduce A5 baseline |
+| B2 | ResNet-SE | ASL | Optimized | 0.8512 | **0.6396** | **0.5533** | 0.6314 | **0.8867** | Test threshold effect |
+| B3 | ResNet-SE | Sqrt-BCE | 0.5 | 0.8610 | 0.5946 | 0.3800 | 0.7138 | 0.8206 | Reproduce A8 baseline |
+| B4 | ResNet-SE | Sqrt-BCE | Optimized | 0.8610 | **0.6471** | **0.4433** | **0.7508** | **0.8293** | Test sensitivity/precision trade-off |
+| B5 | Transformer | ASL | 0.5 | 0.8460 | 0.5780 | 0.3333 | 0.7603 | 0.7307 | Reproduce A1 baseline |
+| B6 | Transformer | ASL | Optimized | 0.8460 | **0.6081** | **0.4400** | 0.6661 | **0.8278** | Test whether Transformer improves with thresholds |
+
+#### Key Empirical Findings & Insights:
+1. **Decision Threshold Optimization Dramatically Boosts Macro F1 across Architectures**:
+   - ResNet-SE + ASL (B1 vs B2): Macro F1 increases from **0.5296 to 0.6396 (+20.8% relative gain)** with threshold tuning, and Subset Accuracy goes from 0.1200 to 0.5533.
+   - ResNet-SE + Sqrt-BCE (B3 vs B4): Macro F1 increases from **0.5946 to 0.6471 (+8.8% relative gain)**.
+   - Transformer + ASL (B5 vs B6): Macro F1 increases from **0.5780 to 0.6081**, and Subset Accuracy increases from **0.3333 to 0.4400**.
+2. **ResNet-SE Achieves Slightly Better Capacity on 2K records**:
+   - Under ASL/Sqrt-BCE with optimized thresholds, ResNet-SE reaches **0.8512 / 0.8610 ROC-AUC**, outperforming the Transformer by a small margin.
+
+---
+
+### Benchmark Suite C: Advanced Loss, Sampling, Thresholds, and Architectures (C1–C17)
+
+**Date:** 2026-08-13  
+**Status:** COMPLETED  
+**Experiment:** `ECG_Benchmark_Suite_C`  
+**Dataset:** PTB-XL (2K subset, Seed 42, trained from scratch)
+
+#### Summary of Benchmark Suite C:
+| ID | Experiment | Loss | ROC-AUC | Macro F1 | Subset Acc | Sensitivity | Specificity |
+|---|---|---|---|---|---|---|---|
+| C3 | Minority-Weighted ASL | WeightedASL | 0.8497 | 0.6046 | 0.4033 | 0.7389 | 0.7972 |
+| C4 | Inv-Freq Weighted BCE | InvFreqBCE | 0.8506 | 0.6138 | 0.4300 | 0.7394 | 0.7946 |
+| C5 | Class-Balanced Loss | CBLoss | **0.8809** | **0.6782** | 0.5067 | 0.7255 | 0.8560 |
+| C6 | Moderate Oversampling 2x | ASL | 0.8735 | 0.6284 | 0.5100 | 0.6541 | 0.8833 |
+| C7 | Strong Oversampling 4x | ASL | 0.8493 | 0.6041 | 0.5167 | 0.6133 | 0.8641 |
+| C8 | Oversampling + Sqrt-BCE | Sqrt-BCE | 0.8450 | 0.6121 | 0.4767 | 0.6669 | 0.8488 |
+| C9 | Hard-Minority Sampling | ASL | **0.8829** | 0.6589 | **0.5600** | 0.6639 | **0.8851** |
+| C10 | Hard-Negative Mining | ASL | 0.8544 | 0.6174 | 0.5433 | 0.6103 | 0.8936 |
+| C11 | F1-Optimized Thresholds | Best(C5) | 0.8809 | **0.6782** | 0.5067 | 0.7255 | 0.8560 |
+| C12 | Recall-Constrained | Best(C5) | 0.8809 | 0.6219 | 0.3933 | **0.8341** | 0.7581 |
+| C13 | Sens/Spec Balanced | Best(C5) | 0.8809 | 0.6393 | 0.4600 | 0.8090 | 0.8059 |
+| C14 | Minority-Specific Thresholds | Best(C5) | 0.8809 | 0.5906 | 0.1900 | 0.8299 | 0.6774 |
+| C15 | Label-Dependency Head | Best(C5) | 0.8681 | 0.6412 | 0.5233 | 0.6522 | 0.8845 |
+| C16 | Cross-Lead Attention | Best(C5) | 0.6984 | 0.4259 | 0.3600 | 0.5220 | 0.7293 |
+| C17 | Cross-Lead + Label Dep | Best(C5) | 0.6737 | 0.4298 | 0.3533 | 0.5521 | 0.6975 |
+
+#### Key Empirical Findings & Insights:
+1. **Class-Balanced Loss (CBLoss) Dominates Loss Formulations**:
+   - CBIoss (C5) achieved **0.8809 ROC-AUC** and **0.6782 Macro F1** (+3.1% absolute F1 gain over B4), proving effective number scaling prevents minority gradient suppression.
+2. **Hard-Minority Adaptive Curriculum Sampling is Superior**:
+   - Adaptive loss-based weighting (C9) produced the highest ROC-AUC (**0.8829**) and Subset Accuracy (**0.5600**).
+3. **Cross-Lead Attention Causes Severe Overfitting**:
+   - Attention over leads (C16/C17) dropped AUC to ~0.67–0.69, showing parameter-dense spatial layers cannot be learned effectively from scratch on 2K records.
+
+---
+
+### Benchmark Suite D: Subset Accuracy (Exact Match) Optimization Sweep (D2-0–D2-5)
+
+**Date:** 2026-08-14  
+**Status:** COMPLETED  
+**Experiment:** `ECG_Benchmark_Suite_D`  
+**Dataset:** PTB-XL (2K subset, Seed 42, trained from scratch)
+
+#### Summary of Benchmark Suite D:
+| Trial | Loss | Auxiliary Task | ROC-AUC | Macro F1 | Subset Acc | Sensitivity | Specificity |
+|---|---|---|---|---|---|---|---|
+| **D2-0** | ASL | None | 0.8691 | 0.6412 | 0.5200 | 0.6244 | 0.9130 |
+| **D2-1** | CBLoss | None | 0.8729 | 0.6144 | 0.5867 | 0.5767 | 0.9149 |
+| **D2-2** | ASL | MI/STTC | 0.8323 | 0.5700 | 0.5200 | 0.5630 | 0.8844 |
+| **D2-3** | ASL | CD | 0.8474 | 0.5730 | 0.5167 | 0.5768 | 0.8730 |
+| **D2-4** | ASL | MI/STTC + CD | 0.8574 | 0.5903 | 0.5200 | 0.6007 | 0.8781 |
+| **D2-5** | CBLoss | MI/STTC + CD | **0.8653** | **0.6336** | **0.5933** | **0.6056** | **0.8946** |
+
+#### Key Empirical Findings & Insights:
+1. **D2-5 Achieves Peak Subset Accuracy (Exact-Match)**:
+   - D2-5 (CBLoss + Combined Auxiliary Heads) achieves **0.5933 exact-match Subset Accuracy**, representing a **+7.33% absolute gain** over D2-0 baseline, and a **+15.0% absolute gain** over the initial B4 baseline (0.4433).
+2. **Class-Balanced Loss (CBLoss) is Structurally Superior for Subset Accuracy**:
+   - Both CBLoss configurations (D2-1: 0.5867, D2-5: 0.5933) significantly outperformed all ASL configurations (~0.5200). 
+3. **Coordinate Ascent Threshold Tuning Direct Target Benefits**:
+   - Fine-tuning decision thresholds directly on validation Subset Accuracy rather than per-class F1 yields cleaner exact-match boundaries on test evaluations.
+
+---
+
+### Benchmark Suite E: Decision-Level Fusion & Calibration Sweep (E1-0–E1-8)
+
+**Date:** 2026-08-14  
+**Status:** COMPLETED  
+**Experiment:** `ECG_Benchmark_Suite_E`  
+**Dataset:** PTB-XL (2K subset, Seed 42, trained from scratch)
+
+#### Summary of Benchmark Suite E:
+| ID | Experiment | Threshold Objective | ROC-AUC | Macro F1 | Subset Acc | Sensitivity | Specificity |
+|---|---|---|---|---|---|---|---|
+| **E1-0** | C5 Reference | F1 | 0.8809 | 0.6782 | 0.5067 | 0.7255 | 0.8560 |
+| **E1-1** | D2-5 Reference | Subset Accuracy | 0.8653 | 0.6336 | 0.5933 | 0.6056 | 0.8946 |
+| **E1-2** | Fusion-25 | Pareto (F1+SubsetAcc) | 0.8748 | 0.6534 | 0.5800 | 0.6325 | 0.8951 |
+| **E1-3** | Fusion-50 | Pareto (F1+SubsetAcc) | 0.8803 | 0.6575 | 0.5733 | 0.6595 | 0.8878 |
+| **E1-4** | Fusion-75 | Pareto (F1+SubsetAcc) | 0.8815 | 0.6854 | 0.5800 | 0.6597 | 0.9070 |
+| **E1-5** | Fusion-Optimized ($\alpha=0.80$) | Pareto (F1+SubsetAcc) | 0.8818 | 0.6851 | 0.5833 | 0.6656 | 0.8996 |
+| **E1-6** | Thresh-Optimized Fusion | Pareto + Sens Constraint | 0.8818 | 0.6862 | 0.5833 | 0.6718 | 0.8971 |
+| **E1-7** | Sigmoid Calibration + Thresh | Pareto + Sens Constraint | 0.8818 | 0.6784 | 0.5867 | 0.6467 | 0.9073 |
+| **E1-8** | Final Candidate (E1-5) | Locked Pareto | **0.8818** | **0.6851** | **0.5833** | **0.6656** | **0.8996** |
+
+#### Key Empirical Findings & Insights:
+1. **Best of Both Worlds is Feasible**:
+   - The probability fusion candidate **E1-8** ($\alpha = 0.80$) achieves **0.8818 ROC-AUC** and **0.6851 Macro F1** while maintaining a high Subset Accuracy of **0.5833**, proving ensembling C5 and D2-5 produces structural improvements.
+2. **Sigmoid probability calibration bounds Expected Calibration Error**:
+   - Sigmoid calibration (Platt scaling) successfully limits ECE to a macro average of **0.0532** (or 5.32%), producing highly reliable probabilities for clinical support.
+
+---
+
+### Benchmark Suite E2: Representation-Quality Validation Sweep (E2-0–E2-5)
+
+**Date:** 2026-08-14  
+**Status:** COMPLETED  
+**Experiment:** `ECG_Benchmark_Suite_E2`  
+**Dataset:** PTB-XL (2K subset, Seed 42, trained from scratch)
+
+#### Summary of Benchmark Suite E2:
+| ID | Representation | Method | ROC-AUC | Macro F1 | Subset Acc | Sensitivity | Specificity |
+|---|---|---|---|---|---|---|---|
+| **E2-0** | C5 Frozen | Linear Probe | 0.6727 | 0.4479 | 0.3200 | 0.5642 | 0.6865 |
+| **E2-1** | D2-5 Frozen | Linear Probe | 0.6214 | 0.4242 | 0.2933 | 0.5066 | 0.7336 |
+| **E2-2** | Joint Concatenated | Linear Probe | **0.7331** | **0.5362** | 0.0367 | **0.7665** | 0.6331 |
+
+#### Representation Geometry Metrics:
+| Representation | Cosine Silhouette | NMI (KMeans) | ARI (KMeans) | kNN Purity (k=5) |
+|---|---|---|---|---|
+| C5 Frozen | **0.1242** | 0.2843 | **0.3598** | 0.5864 |
+| D2-5 Frozen | 0.0845 | 0.2829 | 0.2649 | 0.5538 |
+| Joint Concatenated | 0.1173 | **0.2985** | 0.2777 | **0.5991** |
+
+#### Key Empirical Findings & Insights:
+1. **Representations are highly complementary**:
+   - Concatenating C5 and D2-5 representations (**E2-2**) produces a massive Linear Probe boost (**+8.83% absolute F1 / +6.04% AUC** over C5 baseline). This proves that CBLoss and ASL + Aux Targets focus on distinct morphology spaces.
+2. **Local Cosine Purity**:
+   - Concatenating representations achieves the highest local consistency (**0.5991 kNN Purity**), preserving semantic structural groupings.
+
+
+
