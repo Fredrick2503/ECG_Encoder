@@ -31,11 +31,11 @@ LATENT_DIM = 32
 SEED = 42
 
 FEATURES = [
-    "heart_rate", "mean_rr", "sd_rr", "p_amplitude", "p_duration", "pr_interval",
-    "v1_r_amplitude", "v1_s_amplitude", "v5_r_amplitude", "max_r_v1_v6",
-    "r_progression_slope", "max_st_elevation", "max_st_depression", "num_leads_st_deviation",
-    "max_t_amplitude", "mean_t_amplitude", "num_leads_t_inversion", "qrs_duration",
-    "qt_interval", "qtc_interval", "qrs_axis", "t_wave_axis", "qrs_t_angle", "sokolow_lyon"
+    "RR_Mean", "QRS_Duration", "PR_Interval", "QT_Interval", "QTc_Bazett",
+    "ST_Duration", "P_wave_Duration", "R_Amplitude", "P_Amplitude", "T_Amplitude",
+    "ST_Deviation", "Q_Amplitude", "R_S_Ratio", "QRS_Energy", "SDNN",
+    "RMSSD", "pNN50", "pNN20", "SDRR_RMSSD_Ratio", "HRV_Triangular_Index",
+    "LF_Power", "HF_Power", "LF_HF_Ratio", "Total_Power", "Sample_Entropy"
 ]
 
 LABELS = ["NORM", "MI", "STTC", "CD", "HYP"]
@@ -148,7 +148,7 @@ def main():
     df_raw = pd.read_csv(raw_csv)
     
     # Preprocessing (consistent with training)
-    imputer = SimpleImputer(strategy="median")
+    imputer = SimpleImputer(strategy="median", keep_empty_features=True)
     X_imputed = imputer.fit_transform(df_raw[FEATURES])
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X_imputed)

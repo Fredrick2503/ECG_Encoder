@@ -292,3 +292,108 @@ class ECGResNet1D(nn.Module):
         z = self.get_representation(x)
         return self.fc(z)
 
+
+class ECGBiGRU(nn.Module):
+    def __init__(self, input_size: int = 12, hidden_size: int = 128, num_layers: int = 2, num_classes: int = 5, dropout: float = 0.3):
+        super().__init__()
+        self.gru = nn.GRU(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=dropout if num_layers > 1 else 0.0
+        )
+        self.fc = nn.Sequential(
+            nn.Linear(hidden_size * 2, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, num_classes)
+        )
+    def get_representation(self, x: torch.Tensor) -> torch.Tensor:
+        x_transposed = x.transpose(1, 2)
+        output, hidden = self.gru(x_transposed)
+        z = torch.cat([hidden[-2], hidden[-1]], dim=1)
+        return z
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        z = self.get_representation(x)
+        return self.fc(z)
+
+
+class AttentionBiLSTM(nn.Module):
+    def __init__(self, input_size: int = 12, hidden_size: int = 128, num_layers: int = 2, num_classes: int = 5, dropout: float = 0.3):
+        super().__init__()
+        self.lstm = nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=dropout if num_layers > 1 else 0.0
+        )
+        self.attn = nn.Linear(hidden_size * 2, 1)
+        self.fc = nn.Sequential(
+            nn.Linear(hidden_size * 2, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, num_classes)
+        )
+    def get_representation(self, x: torch.Tensor) -> torch.Tensor:
+        x_transposed = x.transpose(1, 2)
+        output, _ = self.lstm(x_transposed)
+        attn_weights = torch.softmax(self.attn(output), dim=1)
+        z = torch.sum(output * attn_weights, dim=1)
+        return z
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        z = self.get_representation(x)
+        return self.fc(z)
+
+
+class ECGCNNBiLSTMTransformer(nn.Module):
+    def __init__(self, input_size: int = 12, hidden_size: int = 128, d_model: int = 128, nhead: int = 8, num_layers: int = 2, num_classes: int = 5, dropout: float = 0.2):
+        super().__init__()
+        self.conv = nn.Sequential(
+            nn.Conv1d(input_size, 64, kernel_size=15, stride=2, padding=7),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Dropout(dropout)
+        )
+        self.lstm = nn.LSTM(
+            input_size=64,
+            hidden_size=hidden_size,
+            num_layers=1,
+            bidirectional=True,
+            batch_first=True
+        )
+        self.proj = nn.Linear(hidden_size * 2, d_model)
+        self.pos_encoder = PositionalEncoding(d_model=d_model)
+        
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=256,
+            dropout=dropout,
+            batch_first=True
+        )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
+        self.fc = nn.Sequential(
+            nn.Linear(d_model, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, num_classes)
+        )
+    def get_representation(self, x: torch.Tensor) -> torch.Tensor:
+        feat = self.conv(x)
+        feat = feat.transpose(1, 2)
+        lstm_out, _ = self.lstm(feat)
+        trans_in = self.proj(lstm_out)
+        encoded = self.pos_encoder(trans_in)
+        out = self.transformer(encoded)
+        z = out.mean(dim=1)
+        return z
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        z = self.get_representation(x)
+        return self.fc(z)
+
+

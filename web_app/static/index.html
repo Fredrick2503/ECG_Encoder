@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Multimodal Representation System — Intelligence Cockpit</title>
+    <meta name="description" content="Interactive 12-lead ECG foundation representation cockpit with 3D latent clustering, 12-lead attributions, and Gemini AI synthesis.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Plotly.js, Chart.js, Marked.js -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <!-- Header Navigation -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="logo-badge">
+                <span class="pulse-dot"></span>
+                <span class="logo-title">ECG MULTIMODAL FOUNDATION SYSTEM</span>
+            </div>
+            <span class="badge-version">PTB-XL 2.6k Latent Manifold</span>
+            <span class="badge-llm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Gemini 2.5 AI Consultation
+            </span>
+        </div>
+        <div class="header-right">
+            <a href="report_comprehensive_backup.html" target="_blank" class="btn-secondary" title="View Static Comprehensive 10-Sample Report Backup">
+                <span>View Static Report Backup ↗</span>
+            </a>
+            <button id="btnScrollToRecord" class="btn-primary">
+                <span>Active Record Deep Dive ↓</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="dashboard-grid">
+        
+        <!-- SECTION 1: 3D Latent Space Clustering & Cohort Records Catalog -->
+        <section class="card full-width" id="sectionClustering">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">🌐</span>
+                    <h2>3D Latent Space Clustering (Learned Fusion Space • 600 Frozen PTB-XL Records)</h2>
+                </div>
+                <div class="manifold-mode-group">
+                    <select id="manifoldModeSelect" class="manifold-select">
+                        <option value="tsne" selected>t-SNE 3D (Disease Clusters)</option>
+                        <option value="pca">PCA 3D (Global Variance)</option>
+                    </select>
+                    <span class="latent-pill" id="latentPillTag">z_fused ∈ ℝ¹⁰⁵⁶ → t-SNE 3D</span>
+                </div>
+            </div>
+            <p class="section-subtitle">
+                Interactive 3D manifold projection of multimodal embeddings extracted from the frozen Temporal (ResNet-1D), Morphology (Spectrogram ResNet-2D), and Biomarker encoders. Rotate, pan, zoom, or click on any point to load and inspect that patient's full 12-lead record.
+            </p>
+
+            <div class="clustering-catalog-split">
+                <!-- 3D Plotly Manifold -->
+                <div class="plotly-container-box">
+                    <div id="plotly3DCluster" class="plotly-chart"></div>
+                </div>
+
+                <!-- Records Catalog Filter & Table -->
+                <div class="records-catalog-box">
+                    <div class="catalog-controls">
+                        <input type="text" id="recordSearchInput" class="search-input" placeholder="Search by Record ID, Diagnosis, Age...">
+                        <div class="filter-pills" id="categoryFilterPills">
+                            <button class="pill active" data-cat="ALL">ALL (600)</button>
+                            <button class="pill pill-norm" data-cat="NORM">NORM</button>
+                            <button class="pill pill-mi" data-cat="MI">MI</button>
+                            <button class="pill pill-sttc" data-cat="STTC">STTC</button>
+                            <button class="pill pill-cd" data-cat="CD">CD</button>
+                            <button class="pill pill-hyp" data-cat="HYP">HYP</button>
+                        </div>
+                    </div>
+                    <div class="records-table-scroll">
+                        <table class="styled-table records-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Patient</th>
+                                    <th>Superclass</th>
+                                    <th>History / Diagnosis</th>
+                                    <th>HR</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recordsTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-controls" id="paginationControls">
+                        <button id="btnPrevPage" class="btn-pagination" disabled>❮ Prev 20</button>
+                        <span class="pagination-info" id="paginationInfo">Page 1 of 30 (1–20 of 600)</span>
+                        <button id="btnNextPage" class="btn-pagination">Next 20 ❯</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Active Selected Record Deep Dive -->
+        <section class="card full-width sample-detail-card" id="activeRecordSection">
+            <!-- Sleek Loading Overlay -->
+            <div id="activeRecordLoadingOverlay" class="loading-overlay hidden">
+                <div class="loading-spinner-box">
+                    <div class="ecg-pulse-spinner"></div>
+                    <h4 class="loading-title">⚡ Running Multimodal AI Pipeline...</h4>
+                    <p class="loading-subtitle">Extracting 12-lead signals, computing Integrated Gradients, Grad-CAM, & 1056-D fusion representations</p>
+                </div>
+            </div>
+
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">🫀</span>
+                    <h2 id="activeRecordTitle">Patient Case — ECG Record #1001</h2>
+                </div>
+                <div class="header-badges">
+                    <div class="patient-tag tag-mi" id="activeRecordTag">DIAGNOSTIC CLASS: MI</div>
+                    <span class="patient-meta" id="activeRecordMeta">64yo Male • Heart Rate: 88 bpm</span>
+                </div>
+            </div>
+
+            <!-- Model Confidence Levels Table -->
+            <h4 class="report-section-label">MODEL CONFIDENCE LEVELS (TEMPORAL • MORPHOLOGY • FUSION JOINT)</h4>
+            <div class="confidence-table-wrapper">
+                <table class="styled-table confidence-table">
+                    <thead>
+                        <tr>
+                            <th>Sub-Model Head</th>
+                            <th>NORM</th>
+                            <th>MI</th>
+                            <th>STTC</th>
+                            <th>CD</th>
+                            <th>HYP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="confidenceTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 12-Lead Full ECG Waveform (Raw) Canvas -->
+            <div class="waveform-block">
+                <div class="block-header">
+                    <h4 class="figure-title">1. Full 12-Lead ECG Waveform (Raw Signal):</h4>
+                    <span class="block-badge">10s Standard Telemetry • 100 Hz</span>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="rawEcgCanvas" class="ecg-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Temporal Attribution Diagram (Integrated Gradients) -->
+            <div class="waveform-block">
+                <div class="block-header">
+                    <h4 class="figure-title">2. Temporal Attribution Diagram (1D Integrated Gradients Overlay):</h4>
+                    <span class="block-badge">Gradient Attribution Focused Intervals</span>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="temporalAttrCanvas" class="ecg-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Morphology 2D Attribution Diagram (Grad-CAM Spectrogram Heatmaps) -->
+            <div class="waveform-block">
+                <div class="block-header">
+                    <h4 class="figure-title">3. Morphology 2D Attribution Diagram (12-Lead Time-Frequency Grad-CAM):</h4>
+                    <span class="block-badge">Layer4 Conv2 Activation Maps</span>
+                </div>
+                <div class="gradcam-grid" id="gradcamGrid">
+                    <!-- 12 Lead heatmaps rendered by JS -->
+                </div>
+            </div>
+
+            <!-- Morphology Translated Waveform Visualization -->
+            <div class="waveform-block">
+                <div class="block-header">
+                    <h4 class="figure-title">4. Morphology Translated Waveform Visualization (Landmark Bounding Boxes):</h4>
+                    <span class="block-badge">Wave Bounding Intervals & Scores</span>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="translatedWaveformCanvas" class="ecg-canvas"></canvas>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- SECTION 3: Clinical Biomarkers Radar & Table -->
+        <section class="card full-width biomarker-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">🔬</span>
+                    <h2>Clinical Biomarkers & HRV Profile (Attention MLP • 32-D Representation)</h2>
+                </div>
+                <span class="latent-pill">24 CWT Features &middot; 48-D Input &rarr; 32-D Embedding</span>
+            </div>
+            <div class="biomarker-split-grid">
+                <div class="radar-box">
+                    <canvas id="biomarkerRadarChart"></canvas>
+                </div>
+                <div class="biomarker-table-box">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Clinical Metric</th>
+                                <th>Measured Value</th>
+                                <th>Standard Reference Limit</th>
+                                <th>Clinical Evaluation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="biomarkerTableBody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Gemini AI Consultation & Research Interpretation -->
+        <section class="card full-width llm-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-icon">🤖</span>
+                    <h2>Gemini AI — Clinical Consultation & Electrophysiological Interpretation</h2>
+                </div>
+                <button id="btnRegenLLM" class="btn-secondary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    <span>Regenerate Synthesis</span>
+                </button>
+            </div>
+            <div class="llm-report-content" id="llmReportContent">
+                <div class="llm-loading-state">
+                    <span class="spinner"></span>
+                    <p>Synthesizing deep cardiological report from multimodal representations via Gemini API...</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="app-footer">
+        <p>ECG Multimodal Representation System • PTB-XL Foundation Model Intelligence Cockpit • Powered by Gemini AI</p>
+    </footer>
+
+    <script src="app.js?v=2"></script>
+</body>
+</html>

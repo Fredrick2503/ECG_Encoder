@@ -1193,6 +1193,26 @@ def extract_ecg(
 # MAIN EXTRACTION
 # ============================================================
 
+import os
+
+def process_single_row(args):
+    ecg_id, filename, ptbxl_root, patient_id, age, sex = args
+    try:
+        record_path = ptbxl_root / str(filename)
+        _, fields = wfdb.rdsamp(str(record_path), sampto=1)
+        fs = float(fields["fs"])
+        features = extract_ecg(record_path, fs)
+        output_row = {
+            "ecg_id": ecg_id,
+            "patient_id": patient_id,
+            "age": age,
+            "sex": sex,
+        }
+        output_row.update(features)
+        return output_row, None
+    except Exception as exc:
+        return None, (ecg_id, str(exc))
+
 def main():
 
     parser = argparse.ArgumentParser(
@@ -1253,113 +1273,45 @@ def main():
     )
 
     rows = []
-
     failed = 0
 
     # --------------------------------------------------------
-    # Process records
+    # Process records in parallel
     # --------------------------------------------------------
-
+    from concurrent.futures import ProcessPoolExecutor, as_completed
     from tqdm import tqdm
 
-    for ecg_id, row in tqdm(
-        metadata.iterrows(),
-        total=len(metadata),
-        desc="Extracting biomarkers",
-    ):
+    logger.info("Preparing metadata parameters...")
+    tasks_args = []
+    for ecg_id, row in metadata.iterrows():
+        filename = row.get("filename_hr", None)
+        if pd.isna(filename):
+            filename = row.get("filename_lr", None)
+        if pd.isna(filename):
+            continue
+        patient_id = row.get("patient_id", np.nan)
+        age = row.get("age", np.nan)
+        sex = row.get("sex", np.nan)
+        tasks_args.append((ecg_id, filename, ptbxl_root, patient_id, age, sex))
 
-        try:
+    num_workers = max(1, (os.cpu_count() or 2) - 1)
+    logger.info(f"Using {num_workers} processes for parallel feature extraction...")
 
-            filename = row.get(
-                "filename_hr",
-                None
-            )
-
-            if pd.isna(filename):
-                filename = row.get(
-                    "filename_lr",
-                    None
-                )
-
-            if pd.isna(filename):
-                raise FileNotFoundError(
-                    "No PTB-XL filename"
-                )
-
-            record_path = (
-                ptbxl_root /
-                str(filename)
-            )
-
-            # ------------------------------------------------
-            # Read signal fields to obtain actual sampling rate
-            # ------------------------------------------------
-
-            _, fields = wfdb.rdsamp(
-                str(record_path),
-                sampto=1,
-            )
-
-            fs = float(
-                fields["fs"]
-            )
-
-            # ------------------------------------------------
-            # Biomarkers
-            # ------------------------------------------------
-
-            features = extract_ecg(
-                record_path,
-                fs,
-            )
-
-            # ------------------------------------------------
-            # Metadata
-            # ------------------------------------------------
-
-            patient_id = row.get(
-                "patient_id",
-                np.nan
-            )
-
-            age = row.get(
-                "age",
-                np.nan
-            )
-
-            sex = row.get(
-                "sex",
-                np.nan
-            )
-
-            # ------------------------------------------------
-            # One flat row
-            # ------------------------------------------------
-
-            output_row = {
-                "ecg_id": ecg_id,
-                "patient_id": patient_id,
-                "age": age,
-                "sex": sex,
-            }
-
-            output_row.update(
-                features
-            )
-
-            rows.append(
-                output_row
-            )
-
-        except Exception as exc:
-
-            failed += 1
-
-            logger.warning(
-                "Failed ECG %s: %s",
-                ecg_id,
-                exc,
-            )
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        futures = {executor.submit(process_single_row, arg): arg[0] for arg in tasks_args}
+        
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Extracting biomarkers"):
+            ecg_id = futures[future]
+            try:
+                row_data, err = future.result()
+                if err is not None:
+                    failed += 1
+                    logger.warning("Failed ECG %s: %s", err[0], err[1])
+                else:
+                    rows.append(row_data)
+            except Exception as exc:
+                failed += 1
+                logger.warning("Failed ECG %s: %s", ecg_id, exc)
 
     # ========================================================
     # DATAFRAME

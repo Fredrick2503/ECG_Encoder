@@ -113,3 +113,12 @@ class ECGReconstructionDecoder(nn.Module):
         """
         flat_reconstruction = self.decoder(z)
         return flat_reconstruction.view(-1, self.num_leads, self.signal_length)
+
+
+from temporal_encoder.encoder_upgrades import (
+    ECGResNet1D,
+    ECGTransformer,
+    ECGMultiScaleCNN,
+    SqueezeExcitation1D,
+    ResBlock1D,
+)
