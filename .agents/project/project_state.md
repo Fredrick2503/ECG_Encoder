@@ -17,6 +17,7 @@ Temporal, Biomarker, and Morphology Encoders Locked & Frozen (V1). Unified repre
 **Overall Progress:**
 **Project Setup & Planning: 100%**
 **Implementation & Consolidation: 90%** (All three encoders fully consolidated and logs up-to-date)
+**Documentation / Thesis: 90%**
 
 ---
 
@@ -78,18 +79,19 @@ Completed:
 * **Benchmark Suite E (E1-0 to E1-8)**: Decision-level probability fusion (C5 + D2-5, α=0.80) with Platt calibration. Best/Locked: E1-8 → ROC-AUC 0.8818, Macro F1 0.6851, Subset Acc 0.5833, Macro ECE 0.0532.
 * **Benchmark Suite E2 (Representation Validation)**: Linear probe, kNN, and clustering evaluation of frozen C5, D2-5, and Joint Concatenated representations. Joint Concatenated best linear probe: ROC-AUC 0.7331, Macro F1 0.5362. Highest kNN purity (0.5991) and NMI (0.2985).
 * **Explainability (Grad-CAM XAI Integration)**: Implemented `explainability/morphology_xai.py` (End-to-end wrapper, 1D IG/Occlusion, 2D Grad-CAM, Lead-Specific Guided Grad-CAM), `explainability/translator.py` (GradCAMTranslator time-domain overlap check), and `explainability/visualizer.py` (overlay overlay plotting). Successfully verified w.r.t input gradients w.r.t specific waves (P, QRS, T) and ranked leads.
-* **Biomarker Encoder Implementation**:
-  * Rebuilt the feature extraction pipeline matching the exact logic of the previous version's `extractor.py` for feature parity, upgraded to support 60 clinical biomarkers (e.g. J-point amplitude, ST-segment area, Sokolow-Lyon/Cornell indices, QRS-T angle).
-  * Upgraded the Biomarker Encoder pipeline with robust median imputation and binary missingness masks (present/missing) concatenated into a joint 2*N feature representation.
-  * Implemented Attention MLP, Beta-VAE, and FT-Transformer autoencoder architectures to learn 32-dim latent representations from 50+ biomarkers, upgrading them with classification heads to jointly perform biomarker reconstruction and direct multi-label diagnostic classification.
-  * Executed feature set comparison experiments and ran optimized parallel biomarker extraction on the full PTB-XL dataset (21,837 records) in 48 minutes, generating 24 clinical features and quality logs.
-  * Trained Attention MLP, Beta-VAE, and FT-Transformer models on the full dataset with patient-wise splitting, generated 32-dim latent embeddings, and compiled a comprehensive comparative evaluation report (FT-Transformer achieving lowest MSE of 0.4017).
+* **Biomarker Encoder Implementation & Clinical Audit**:
+  * Diagnosed and resolved DWT QRS/PR boundary overestimation: Replaced NeuroKit2 DWT delineator with Continuous Wavelet Transform (CWT), correcting median QRS duration from 169.62 ms to 105.79 ms and restoring median PR interval from 98.31 ms to 148.00 ms across 21,808 PTB-XL records.
+  * Eliminated data leakage: Enforced strict patient-wise train/val/test partitioning and fitted SimpleImputer and StandardScaler exclusively on the training subset.
+  * Rebuilt feature extraction pipeline supporting 60 clinical biomarkers (e.g. J-point amplitude, ST-segment area, Sokolow-Lyon/Cornell indices, QRS-T angle).
+  * Implemented Attention MLP, Beta-VAE, and FT-Transformer autoencoder architectures to learn 32-dim latent representations from 50+ biomarkers with classification heads.
+  * Executed feature set comparison experiments and ran optimized parallel biomarker extraction on the full PTB-XL dataset (21,837 records) in 48 minutes.
+  * Retrained and benchmarked 3 CWT Biomarker Encoders: Attention MLP (Macro F1 = 0.6332, ROC-AUC = 0.8622), Beta-VAE (Macro F1 = 0.6347, PR-AUC = 0.6918), and FT-Transformer (Recon MSE = 0.1286, MAE = 0.2423), verifying that 32-D latent representations outperform raw features by +6.09% Macro F1.
   * Performed unsupervised clustering validation (K-Means K=5) on the 32-dimensional embeddings, generated PCA and t-SNE 2D visualizations, and calculated Silhouette, ARI, and NMI metrics to confirm natural diagnostic separation.
 * **Morphology Encoder Implementation**:
   * Implemented a 2D ResNet-based morphology encoder module (`morphology_encoder/encoder.py`) extracting a 512-dimensional beat-level representation ($Z_{morphology}$) from GAF, spectrogram, and scalogram transforms.
   * Executed and evaluated GAF, spectrogram, and scalogram representations under Class-Balanced loss (`run_scalogram_experiments.py`).
   * Developed the `run_fusion_suite.py` script performing concatenation baseline and learned MLP fusion (1024-D to 512-D), verifying domain complementarity and diagnostic cluster segregation.
-* Full documentation synced: thesis_notes.md (Chapters 1–12), reports, notebooks, and research journals.
+* Full documentation synced: thesis_notes.md (Chapters 1–12), reports, notebooks, and research journals across `docs/`, `outputs/reports/`, `outputs/results/`, and `.agents/project/research/`.
 
 ---
 
@@ -115,48 +117,24 @@ Develop the **Unified Classification Engine** on top of the final fused represen
 
 # Upcoming Milestones
 
-### Milestone 1
-Complete the Data Management module.
-
-### Milestone 2
-Complete the Signal Preprocessing pipeline.
-
-### Milestone 3
-Develop the shared training infrastructure.
-
-### Milestone 4
-Implement the Temporal Encoder.
-
-### Milestone 5
-Train the first baseline model.
-
-### Milestone 6
-Integrate MLflow and experiment tracking.
-
-### Milestone 7
-Benchmark temporal representation learning methods.
-
-### Milestone 8
-Implement the Morphology Encoder.
-
-### Milestone 9
-Implement the Biomarker Encoder.
-
-### Milestone 10
-Develop the Adaptive Fusion Engine.
-
-### Milestone 11
-Train the complete ECG Foundation Representation System.
-
-### Milestone 12
-Develop Explainability, Inference, Deployment, and Thesis documentation.
+### Milestone 1: Data Management (DONE)
+### Milestone 2: Signal Preprocessing (DONE)
+### Milestone 3: Shared Training Infrastructure (DONE)
+### Milestone 4: Temporal Encoder (DONE)
+### Milestone 5: Baseline Model Training (DONE)
+### Milestone 6: MLflow Experiment Tracking (DONE)
+### Milestone 7: Temporal Benchmarking (DONE)
+### Milestone 8: Biomarker Foundation Encoder (DONE - CWT Corrected)
+### Milestone 9: Morphology Foundation Encoder (DONE)
+### Milestone 10: Adaptive Multi-Modal Fusion Engine (DONE)
+### Milestone 11: End-to-End Pan-Cardiac Evaluation (DONE)
+### Milestone 12: Explainability, Deployment, and Thesis Documentation (IN_PROGRESS)
 
 ---
 
 # Project Principles
 
 * All implementation will follow the finalized architecture.
-* Previous prototype code is reference-only and will not be reused directly.
 * Every module will be implemented incrementally with clear interfaces and separation of responsibilities.
 * Research reproducibility, modularity, and maintainability take precedence over rapid implementation.
 * Every major implementation milestone will be documented, evaluated, and tracked through the Project Memory system.

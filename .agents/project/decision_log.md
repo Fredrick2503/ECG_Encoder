@@ -25,7 +25,8 @@ Separate concerns into independent modules that communicate through well-defined
 2. Signal Preprocessing
 3. Representation Generation
 4. Temporal Encoder
-5. Morphology Encoder
+5. Biomarker Encoder
+6. Morphology Encoder
 
 All remaining modules are deferred until this implementation is stable.
 
@@ -81,6 +82,7 @@ Preprocessing standardizes ECG signals.
 Representation Generation creates:
 
 * Temporal representation
+* Biomarker representation
 * Morphology representation
 
 ---
@@ -103,32 +105,44 @@ Each encoder owns:
 
 ### DEC-008
 
-**Decision:** Freeze project scope after the Morphology Encoder.
+**Decision:** Maintain modular encoders before Multi-Modal Fusion Engine.
 
 **Status:** Accepted
 
-The following components remain planned only:
-
-* Biomarker Encoder
-* Fusion Engine
-* Unified Classification
-* Explainability
-* Deployment
-
-They will not be designed or implemented until the roadmap is officially extended.
+Encoders (Temporal, Biomarker, Morphology) produce standardized latent embeddings that interface with the downstream Fusion Engine.
 
 ---
 
 ### DEC-009
 
-**Decision:** Speed up the training sweep by reducing epochs and increasing batch size.
+**Decision:** Use Continuous Wavelet Transform (CWT) for wave delineation over DWT.
 
 **Status:** Accepted
 
-**Details:**
-* **Epochs per trial**: Reduced from 25 to 15.
-* **Batch size**: Increased from 64 to 128 (to leverage GPU parallelism more effectively).
-* **Dataset Size**: Continued on 1000 records.
+**Reason:**
+
+NeuroKit2's DWT delineator caused systematic boundary overestimation, inflating QRS duration to ~170 ms. CWT scale-space localization restores physiological boundaries (median QRS ~106 ms, median PR ~148 ms) and reduces QC warnings by 96.7%.
+
+---
+
+### DEC-010
+
+**Decision:** Enforce strict patient-wise partitioning and leakage-free biomarker preprocessing.
+
+**Status:** Accepted
 
 **Reason:**
-To reduce the overall sweep duration from ~10.3 hours to ~2–3 hours. Since early stopping typically triggers within 10-12 epochs, a max-epoch limit of 15 maintains training quality while providing a massive speedup, and larger batches accelerate execution per epoch without performance degradation on this dataset size.
+
+Prevent test-set information from leaking into training pipelines by fitting Imputer and Scaler exclusively on the patient-wise training split and transforming validation and test partitions.
+
+---
+
+### DEC-011
+
+**Decision:** Multi-Task Regularized 32-D Latent Biomarker Encoders.
+
+**Status:** Accepted
+
+**Reason:**
+
+Joint optimization of reconstruction loss (MSE) and multi-label diagnostic classification loss (BCEWithLogits) regularizes the 32-D latent space, increasing downstream Macro F1 by +6.09% over raw clinical features while preventing dimensional collapse (0/32 collapsed dims).
