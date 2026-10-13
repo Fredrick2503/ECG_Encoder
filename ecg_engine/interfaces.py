@@ -33,24 +33,48 @@ class EngineConfig:
     sampling_rate: int = 100
     target_length: int = 1000
     num_leads: int = 12
+    auto_adapt_duration: bool = True
+
+    @classmethod
+    def for_2sec(
+        cls,
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        use_adapted_weights: bool = True
+    ) -> EngineConfig:
+        """Factory method configuring engine for native 2-second ECG processing."""
+        temp_weights = "models/2sec_resnet_se_best.pt" if use_adapted_weights and Path("models/2sec_resnet_se_best.pt").exists() else "models/C5_full_dataset.pt"
+        th_path = "models/2sec_classifier_mlp_thresholds.npy" if Path("models/2sec_classifier_mlp_thresholds.npy").exists() else "models/classification_mlp_thresholds.npy"
+        
+        return cls(
+            device=device,
+            temporal_model_path=temp_weights,
+            thresholds_path=th_path,
+            target_length=200,
+            sampling_rate=100,
+            auto_adapt_duration=True
+        )
 
 
 @dataclass
 class FusedRepresentationResult:
     """Encapsulates the multimodal latent representations extracted by the engine."""
-    z_fused: np.ndarray        # (batch_size, 1056)
+    z_fused: np.ndarray        # (batch_size, 1056) - Early concatenated baseline representation
     z_temporal: np.ndarray     # (batch_size, 512)
     z_morphology: np.ndarray   # (batch_size, 512)
     z_biomarker: np.ndarray    # (batch_size, 32)
+    z_unified: Optional[np.ndarray] = None # (batch_size, 128) - Learned non-linear bottleneck embedding
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, np.ndarray]:
-        return {
+        d = {
             "z_fused": self.z_fused,
             "z_temporal": self.z_temporal,
             "z_morphology": self.z_morphology,
             "z_biomarker": self.z_biomarker,
         }
+        if self.z_unified is not None:
+            d["z_unified"] = self.z_unified
+        return d
 
 
 @dataclass

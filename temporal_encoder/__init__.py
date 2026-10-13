@@ -13,9 +13,9 @@ from temporal_encoder.encoder import (
     SqueezeExcitation1D,
     ResBlock1D,
 )
-from temporal_encoder.predictor import TemporalPredictor
-from temporal_encoder.evaluator import TemporalEvaluator
-from temporal_encoder.explainer import TemporalSaliencyExplainer
+from temporal_encoder.encoder_upgrades import (
+    ECGResNet1D as ECGResNet1DUpgraded,
+)
 
 __all__ = [
     "ECGBiLSTM",
@@ -25,7 +25,5 @@ __all__ = [
     "ECGMultiScaleCNN",
     "SqueezeExcitation1D",
     "ResBlock1D",
-    "TemporalPredictor",
-    "TemporalEvaluator",
-    "TemporalSaliencyExplainer",
+    "ECGResNet1DUpgraded",
 ]

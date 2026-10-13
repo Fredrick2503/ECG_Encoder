@@ -15,10 +15,17 @@ class SignalPreprocessor(BasePreprocessor):
     """
     Concrete preprocessor for 12-lead ECG time-series signals.
     Standardizes shape to (12, target_length) and applies robust z-score normalization.
+    Supports native 2-second (200 samples @ 100Hz) and 10-second (1000 samples @ 100Hz) modes.
     """
-    def __init__(self, target_length: int = 1000, num_leads: int = 12):
+    def __init__(
+        self,
+        target_length: Optional[int] = 1000,
+        num_leads: int = 12,
+        auto_adapt_duration: bool = True
+    ):
         self.target_length = target_length
         self.num_leads = num_leads
+        self.auto_adapt_duration = auto_adapt_duration
 
     def preprocess(self, signal: np.ndarray | torch.Tensor) -> torch.Tensor:
         """
@@ -52,13 +59,26 @@ class SignalPreprocessor(BasePreprocessor):
         else:
             raise ValueError(f"Expected 2D or 3D tensor/array, got shape {x.shape}")
 
-        # Resample / interpolate along time dimension if length does not match target_length
-        if x.shape[2] != self.target_length:
-            x = F.interpolate(x, size=self.target_length, mode='linear', align_corners=False)
+        # Resample / interpolate along time dimension if needed
+        if self.target_length is not None:
+            if self.auto_adapt_duration and x.shape[2] <= 300:
+                # Native ultra-short mode (2.0s @ 100Hz = 200 samples)
+                if x.shape[2] != 200:
+                    x = F.interpolate(x, size=200, mode='linear', align_corners=False)
+            elif self.auto_adapt_duration and x.shape[2] in (200, 1000):
+                pass
+            elif x.shape[2] != self.target_length:
+                x = F.interpolate(x, size=self.target_length, mode='linear', align_corners=False)
 
-        # Per-lead zero-mean, unit-variance normalization (Z-score)
-        mean = x.mean(dim=2, keepdim=True)
+        # Per-lead normalization: for short windows (<= 300 samples), use isoelectric
+        # median baseline subtraction to prevent QRS/T-wave area from depressing the
+        # baseline and creating false ST elevation (STEMI / STTC false alarms).
+        if x.shape[2] <= 300:
+            baseline = torch.median(x, dim=2, keepdim=True).values
+        else:
+            baseline = x.mean(dim=2, keepdim=True)
+
         std = x.std(dim=2, keepdim=True) + 1e-8
-        x_norm = (x - mean) / std
+        x_norm = (x - baseline) / std
 
         return x_norm

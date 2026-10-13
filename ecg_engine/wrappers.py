@@ -22,8 +22,14 @@ class TemporalEncoderWrapper(BaseEncoder):
     """
     Wrapper for 1D Temporal ResNet-SE Foundation Encoder.
     Outputs: z_temporal in R^512.
+    Supports dual model checkpoints: standard 10-second C5 and native 2-second adapted ResNet-SE.
     """
-    def __init__(self, model_path: Optional[Union[str, Path]] = "models/C5_full_dataset.pt", device: str = "cpu"):
+    def __init__(
+        self,
+        model_path: Optional[Union[str, Path]] = "models/C5_full_dataset.pt",
+        model_2sec_path: Optional[Union[str, Path]] = "models/2sec_resnet_se_best.pt",
+        device: str = "cpu"
+    ):
         super().__init__()
         self._output_dim = 512
         self.device = device
@@ -40,6 +46,19 @@ class TemporalEncoderWrapper(BaseEncoder):
         for p in self.model.parameters():
             p.requires_grad_(False)
 
+        # 2-Second adapted temporal model
+        self.model_2sec = None
+        if model_2sec_path and os.path.exists(model_2sec_path):
+            self.model_2sec = ECGResNet1D(num_classes=5, use_se=True).to(device)
+            try:
+                state_2s = torch.load(model_2sec_path, map_location=device, weights_only=False)
+            except TypeError:
+                state_2s = torch.load(model_2sec_path, map_location=device)
+            self.model_2sec.load_state_dict(state_2s)
+            self.model_2sec.eval()
+            for p in self.model_2sec.parameters():
+                p.requires_grad_(False)
+
     @property
     def output_dim(self) -> int:
         return self._output_dim
@@ -53,6 +72,8 @@ class TemporalEncoderWrapper(BaseEncoder):
         """
         x = x.to(self.device)
         with torch.no_grad():
+            if x.shape[2] <= 300 and self.model_2sec is not None:
+                return self.model_2sec.get_representation(x)
             return self.model.get_representation(x)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -95,7 +116,8 @@ class MorphologyEncoderWrapper(BaseEncoder):
         """
         x = x.to(self.device)
         with torch.no_grad():
-            spec = ecg_to_spectrogram(x)
+            hop = 8 if x.shape[-1] <= 300 else 32
+            spec = ecg_to_spectrogram(x, hop_length=hop)
             return self.model.get_representation(spec)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

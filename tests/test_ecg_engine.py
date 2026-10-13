@@ -60,6 +60,20 @@ class TestECGEncoderEngine(unittest.TestCase):
         self.assertEqual(rep.z_morphology.shape, (2, 512))
         self.assertEqual(rep.z_biomarker.shape, (2, 32))
         self.assertEqual(rep.z_fused.shape, (2, 1056))
+        if rep.z_unified is not None:
+            self.assertEqual(rep.z_unified.shape, (2, 128))
+
+    def test_unified_dense_embedding_extraction(self):
+        # Directly test diagnostic classifier bottleneck extraction
+        from ecg_engine.classifier import DiagnosticClassifier
+        classifier = DiagnosticClassifier(device="cpu")
+        x_fused = torch.randn(3, 1056)
+        z_unified = classifier.get_unified_embedding(x_fused)
+        self.assertEqual(z_unified.shape, (3, 128))
+        
+        # Verify forward prediction still operates identically
+        probs = classifier.predict_proba(x_fused)
+        self.assertEqual(probs.shape, (3, 5))
 
     def test_end_to_end_prediction(self):
         batch_signals = np.random.randn(2, 12, 1000)

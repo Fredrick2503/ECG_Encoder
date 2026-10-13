@@ -3,257 +3,376 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Multimodal Representation System — Intelligence Cockpit</title>
-    <meta name="description" content="Interactive 12-lead ECG foundation representation cockpit with 3D latent clustering, 12-lead attributions, and Gemini AI synthesis.">
-    <!-- Google Fonts -->
+    <title>ECG Clinical Diagnostic Report Generator — Multimodal Foundation System</title>
+    <meta name="description" content="Professional Black & White 12-Lead ECG Clinical Report Generator with tri-modal foundation AI representation, diagnostic classification, and printable medical reports.">
+    <!-- Clean Clinical Typography: Inter & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Plotly.js, Chart.js, Marked.js -->
-    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js & Marked.js for clean rendering -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="glow-orb orb-1"></div>
-    <div class="glow-orb orb-2"></div>
 
-    <!-- Header Navigation -->
-    <header class="app-header">
-        <div class="header-left">
-            <div class="logo-badge">
-                <span class="pulse-dot"></span>
-                <span class="logo-title">ECG MULTIMODAL FOUNDATION SYSTEM</span>
+    <!-- ========================================================================= -->
+    <!-- TOP SCREEN TOOLBAR (Hidden in Print Mode)                                 -->
+    <!-- ========================================================================= -->
+    <header class="screen-toolbar no-print">
+        <div class="toolbar-brand">
+            <span class="toolbar-badge">CORE LAB</span>
+            <div class="toolbar-titles">
+                <span class="toolbar-main-title">ECG CLINICAL REPORT GENERATOR</span>
+                <span class="toolbar-sub-title">Multimodal Foundation AI Engine (1056-D &bull; PTB-XL Calibrated)</span>
             </div>
-            <span class="badge-version">PTB-XL 2.6k Latent Manifold</span>
-            <span class="badge-llm">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                Gemini 2.5 AI Consultation
-            </span>
         </div>
-        <div class="header-right">
-            <a href="report_comprehensive_backup.html" target="_blank" class="btn-secondary" title="View Static Comprehensive 10-Sample Report Backup">
-                <span>View Static Report Backup ↗</span>
-            </a>
-            <button id="btnScrollToRecord" class="btn-primary">
-                <span>Active Record Deep Dive ↓</span>
+
+        <div class="toolbar-controls">
+            <!-- Patient / Case Selector -->
+            <div class="control-group">
+                <label for="sampleSelectHeader">Select Record:</label>
+                <select id="sampleSelectHeader" class="clean-select" aria-label="Select Clinical ECG Record">
+                    <option value="" disabled selected>Loading records catalog...</option>
+                </select>
+            </div>
+
+            <!-- Category Filter Pills -->
+            <div class="filter-pills" id="categoryFilterPills">
+                <button class="pill active" data-cat="ALL">ALL</button>
+                <button class="pill" data-cat="NORM">NORM</button>
+                <button class="pill" data-cat="MI">MI</button>
+                <button class="pill" data-cat="STTC">STTC</button>
+                <button class="pill" data-cat="CD">CD</button>
+                <button class="pill" data-cat="HYP">HYP</button>
+            </div>
+
+            <!-- Upload Custom Signal -->
+            <div class="upload-wrapper">
+                <input type="file" id="fileUploadInput" accept=".npy,.json,.csv" style="display: none;">
+                <button id="btnUploadCustom" class="btn-clean" title="Upload custom 12-lead signal (.npy or .json)">
+                    <span>Upload ECG</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="toolbar-actions">
+            <!-- Grid Style Toggle -->
+            <button id="btnToggleGrid" class="btn-clean" title="Toggle between Millimeter Grid and Plain White">
+                <span id="gridToggleText">Grid: 1mm/5mm</span>
             </button>
+
+            <!-- Live Engine Re-Analysis -->
+            <button id="btnRunLiveEngine" class="btn-clean" title="Re-execute Live Foundation Engine (Signal -> Embeddings -> Diagnosis)">
+                <span>⚡ Re-Analyze</span>
+            </button>
+
+            <!-- AI Interpretation -->
+            <button id="btnGenerateAI" class="btn-clean" title="Generate AI Electrophysiological Consultation">
+                <span>🤖 AI Consultation</span>
+            </button>
+
+            <!-- Print Report Button (High Priority) -->
+            <button id="btnPrintReport" class="btn-action-primary" title="Print Official Clinical Medical Report (A4 / Letter)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                <span>Print Report</span>
+            </button>
+
+            <!-- Link to 3D Latent Space View -->
+            <a href="cockpit_3d_index.html" class="btn-link" title="Open 3D Latent Manifold Cockpit" target="_blank">
+                <span>3D Manifold ↗</span>
+            </a>
         </div>
     </header>
 
-    <main class="dashboard-grid">
-        
-        <!-- SECTION 1: 3D Latent Space Clustering & Cohort Records Catalog -->
-        <section class="card full-width" id="sectionClustering">
-            <div class="card-header">
-                <div class="card-title-group">
-                    <span class="card-icon">🌐</span>
-                    <h2>3D Latent Space Clustering (Learned Fusion Space • 600 Frozen PTB-XL Records)</h2>
-                </div>
-                <div class="manifold-mode-group">
-                    <select id="manifoldModeSelect" class="manifold-select">
-                        <option value="tsne" selected>t-SNE 3D (Disease Clusters)</option>
-                        <option value="pca">PCA 3D (Global Variance)</option>
-                    </select>
-                    <span class="latent-pill" id="latentPillTag">z_fused ∈ ℝ¹⁰⁵⁶ → t-SNE 3D</span>
-                </div>
-            </div>
-            <p class="section-subtitle">
-                Interactive 3D manifold projection of multimodal embeddings extracted from the frozen Temporal (ResNet-1D), Morphology (Spectrogram ResNet-2D), and Biomarker encoders. Rotate, pan, zoom, or click on any point to load and inspect that patient's full 12-lead record.
-            </p>
 
-            <div class="clustering-catalog-split">
-                <!-- 3D Plotly Manifold -->
-                <div class="plotly-container-box">
-                    <div id="plotly3DCluster" class="plotly-chart"></div>
-                </div>
+    <!-- ========================================================================= -->
+    <!-- MAIN CLINICAL REPORT SHEET (Pristine Black & White Print Layout)         -->
+    <!-- ========================================================================= -->
+    <main class="report-wrapper">
+        <article class="report-sheet" id="clinicalReportSheet">
 
-                <!-- Records Catalog Filter & Table -->
-                <div class="records-catalog-box">
-                    <div class="catalog-controls">
-                        <input type="text" id="recordSearchInput" class="search-input" placeholder="Search by Record ID, Diagnosis, Age...">
-                        <div class="filter-pills" id="categoryFilterPills">
-                            <button class="pill active" data-cat="ALL">ALL (600)</button>
-                            <button class="pill pill-norm" data-cat="NORM">NORM</button>
-                            <button class="pill pill-mi" data-cat="MI">MI</button>
-                            <button class="pill pill-sttc" data-cat="STTC">STTC</button>
-                            <button class="pill pill-cd" data-cat="CD">CD</button>
-                            <button class="pill pill-hyp" data-cat="HYP">HYP</button>
-                        </div>
+            <!-- 1. CLINICAL HEADER & HOSPITAL IDENTIFICATION -->
+            <section class="report-hospital-header">
+                <div class="hospital-branding">
+                    <div class="hospital-logo-mark">ECG</div>
+                    <div>
+                        <h1 class="hospital-name">CARDIAC ELECTROPHYSIOLOGY CLINICAL CORE LABORATORY</h1>
+                        <p class="hospital-subtext">ADVANCED MULTIMODAL FOUNDATION SYSTEM &bull; 12-LEAD DIAGNOSTIC EXAMINATION</p>
                     </div>
-                    <div class="records-table-scroll">
-                        <table class="styled-table records-table">
+                </div>
+
+                <div class="report-meta-box">
+                    <div class="meta-row"><span class="meta-lbl">REPORT ID:</span> <span class="meta-val font-mono" id="valReportUid">ECG-REP-2026-0913</span></div>
+                    <div class="meta-row"><span class="meta-lbl">ACQUISITION:</span> <span class="meta-val font-mono" id="valAcquisitionTime">2026-10-13 14:00:00 UTC</span></div>
+                    <div class="meta-row"><span class="meta-lbl">DEVICE:</span> <span class="meta-val font-mono">12-Lead Digital CardioSystem (100 Hz, 16-bit)</span></div>
+                    <div class="meta-row"><span class="meta-lbl">STANDARDS:</span> <span class="meta-val font-mono">25 mm/s &bull; 10 mm/mV &bull; 0.05 - 150 Hz</span></div>
+                </div>
+            </section>
+
+            <!-- 2. PATIENT DEMOGRAPHICS & CLINICAL HISTORY TABLE -->
+            <section class="patient-demographics-grid">
+                <div class="demo-cell">
+                    <span class="cell-label">PATIENT NAME</span>
+                    <span class="cell-value" id="valPatientName">RECORD #21826</span>
+                </div>
+                <div class="demo-cell">
+                    <span class="cell-label">PATIENT / ECG ID</span>
+                    <span class="cell-value font-mono" id="valPatientId">PTBXL-21826</span>
+                </div>
+                <div class="demo-cell">
+                    <span class="cell-label">AGE / SEX</span>
+                    <span class="cell-value" id="valPatientAgeSex">82 Y / Female</span>
+                </div>
+                <div class="demo-cell">
+                    <span class="cell-label">HEART RATE</span>
+                    <span class="cell-value font-mono font-bold" id="valPatientHeartRate">77 BPM</span>
+                </div>
+                <div class="demo-cell">
+                    <span class="cell-label">ESTIMATED RHYTHM</span>
+                    <span class="cell-value" id="valPatientRhythm">Normal Sinus Rhythm</span>
+                </div>
+                <div class="demo-cell cell-full-width">
+                    <span class="cell-label">CLINICAL HISTORY / REFERRAL INDICATION</span>
+                    <span class="cell-value" id="valClinicalHistory">Pre-operative evaluation. History of chest discomfort and hypertension.</span>
+                </div>
+            </section>
+
+            <!-- 3. AUTOMATED DIAGNOSTIC IMPRESSION (PRIMARY CLINICAL SUMMARY) -->
+            <section class="diagnostic-summary-box">
+                <div class="summary-top-bar">
+                    <div class="summary-title-group">
+                        <span class="status-marker" id="valStatusMarker">●</span>
+                        <h2 class="summary-headline" id="valDiagnosisHeadline">AUTOMATED DIAGNOSTIC FINDINGS & CLASSIFICATION</h2>
+                    </div>
+                    <span class="badge-ground-truth" id="valGroundTruthBadge">GROUND TRUTH: MI</span>
+                </div>
+
+                <div class="summary-impression-text" id="valImpressionBullets">
+                    &bull; Pathological ST-T wave abnormalities consistent with myocardial ischemia or infarction.<br>
+                    &bull; Normal atrioventricular conduction without high-grade conduction delay.<br>
+                    &bull; Multi-label foundation model calibrated confidence exceeds diagnostic alert threshold.
+                </div>
+            </section>
+
+            <!-- 4. MULTI-LABEL SUPERCLASS CLASSIFICATION BENCHMARK TABLE -->
+            <section class="classification-section">
+                <div class="section-title-bar">
+                    <h3>MULTIMODAL FOUNDATION MODEL SUPERCLASS PREDICTIONS</h3>
+                    <span class="section-note font-mono">Calibrated Decision Thresholds (&tau;) &bull; PTB-XL Superclasses</span>
+                </div>
+
+                <table class="clinical-table classification-table" id="classificationTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">SUPERCLASS</th>
+                            <th style="width: 32%;">CLINICAL PATHOLOGY</th>
+                            <th style="width: 22%;">PROBABILITY</th>
+                            <th style="width: 14%;">THRESHOLD (&tau;)</th>
+                            <th style="width: 20%; text-align: center;">STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classificationTableBody">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- 5. OFFICIAL 12-LEAD DIAGNOSTIC ECG TRACING CANVAS -->
+            <section class="waveform-tracing-section">
+                <div class="section-title-bar">
+                    <div class="waveform-legend-left">
+                        <h3>12-LEAD DIAGNOSTIC ELECTROCARDIOGRAM</h3>
+                        <span class="tracing-specs font-mono">Standard 4 &times; 3 Layout (2.5s/lead) + Continuous Lead II Rhythm Strip (10.0s)</span>
+                    </div>
+                    <div class="waveform-legend-right font-mono">
+                        <span>Speed: 25 mm/s</span> &bull;
+                        <span>Voltage: 10 mm/mV (1.0 mV Cal Pulse)</span>
+                    </div>
+                </div>
+
+                <!-- Interactive Calipers & Hover Readout (Screen Only) -->
+                <div class="waveform-screen-toolbar no-print">
+                    <div class="caliper-readout font-mono" id="caliperReadout">
+                        Hover: <span id="hoverTime">t = 0.00s</span> &bull; <span id="hoverVolt">V = 0.00 mV</span> &bull; <span id="hoverLead">Lead: --</span>
+                    </div>
+                    <div class="caliper-controls">
+                        <button id="btnResetZoom" class="btn-mini">Reset View</button>
+                        <button id="btnInvertTrace" class="btn-mini">Invert B/W</button>
+                    </div>
+                </div>
+
+                <!-- 12-Lead Waveform Canvas Container -->
+                <div class="canvas-container" id="ecgCanvasContainer">
+                    <canvas id="ecgReportCanvas" width="1200" height="720"></canvas>
+                </div>
+            </section>
+
+            <!-- 6. QUANTITATIVE PHYSIOLOGICAL BIOMARKERS TABLE (24 PARAMETERS) -->
+            <section class="biomarkers-section">
+                <div class="section-title-bar">
+                    <h3>EXTRACTED ELECTROPHYSIOLOGICAL BIOMARKERS & INTERVALS</h3>
+                    <span class="section-note font-mono">Deterministic R-Peak & Morphology Extraction &bull; Clinical Reference Norms</span>
+                </div>
+
+                <div class="biomarkers-multi-col-grid" id="biomarkersGrid">
+                    <!-- Column 1: Conduction Intervals -->
+                    <div class="biomarker-table-box">
+                        <div class="sub-table-header">CARDIAC INTERVALS & DURATIONS</div>
+                        <table class="clinical-table mini-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Patient</th>
-                                    <th>Superclass</th>
-                                    <th>History / Diagnosis</th>
-                                    <th>HR</th>
-                                    <th>Action</th>
+                                    <th>BIOMARKER</th>
+                                    <th>VALUE</th>
+                                    <th>NORMAL RANGE</th>
+                                    <th>FLAG</th>
                                 </tr>
                             </thead>
-                            <tbody id="recordsTableBody">
+                            <tbody id="bioIntervalsTableBody">
                                 <!-- Populated dynamically -->
                             </tbody>
                         </table>
                     </div>
-                    <div class="pagination-controls" id="paginationControls">
-                        <button id="btnPrevPage" class="btn-pagination" disabled>❮ Prev 20</button>
-                        <span class="pagination-info" id="paginationInfo">Page 1 of 30 (1–20 of 600)</span>
-                        <button id="btnNextPage" class="btn-pagination">Next 20 ❯</button>
+
+                    <!-- Column 2: Wave Amplitudes & Segments -->
+                    <div class="biomarker-table-box">
+                        <div class="sub-table-header">VOLTAGES, AXIS & REPOLARIZATION</div>
+                        <table class="clinical-table mini-table">
+                            <thead>
+                                <tr>
+                                    <th>BIOMARKER</th>
+                                    <th>VALUE</th>
+                                    <th>NORMAL RANGE</th>
+                                    <th>FLAG</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bioAmplitudesTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Column 3: Heart Rate Variability & Dynamics -->
+                    <div class="biomarker-table-box">
+                        <div class="sub-table-header">AUTONOMIC HRV & ENERGY METRICS</div>
+                        <table class="clinical-table mini-table">
+                            <thead>
+                                <tr>
+                                    <th>BIOMARKER</th>
+                                    <th>VALUE</th>
+                                    <th>NORMAL RANGE</th>
+                                    <th>FLAG</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bioHrvTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- SECTION 2: Active Selected Record Deep Dive -->
-        <section class="card full-width sample-detail-card" id="activeRecordSection">
-            <!-- Sleek Loading Overlay -->
-            <div id="activeRecordLoadingOverlay" class="loading-overlay hidden">
-                <div class="loading-spinner-box">
-                    <div class="ecg-pulse-spinner"></div>
-                    <h4 class="loading-title">⚡ Running Multimodal AI Pipeline...</h4>
-                    <p class="loading-subtitle">Extracting 12-lead signals, computing Integrated Gradients, Grad-CAM, & 1056-D fusion representations</p>
+            <!-- 7. MULTIMODAL LATENT REPRESENTATION EMBEDDING METRICS -->
+            <section class="representations-audit-section">
+                <div class="section-title-bar">
+                    <h3>MULTIMODAL FOUNDATION LATENT REPRESENTATION AUDIT</h3>
+                    <span class="section-note font-mono">Tri-Modal Embedding Vectors &bull; Joint Bottleneck Z_fused &in; &reals;1056 &rarr; &reals;128</span>
                 </div>
-            </div>
 
-            <div class="card-header">
-                <div class="card-title-group">
-                    <span class="card-icon">🫀</span>
-                    <h2 id="activeRecordTitle">Patient Case — ECG Record #1001</h2>
-                </div>
-                <div class="header-badges">
-                    <div class="patient-tag tag-mi" id="activeRecordTag">DIAGNOSTIC CLASS: MI</div>
-                    <span class="patient-meta" id="activeRecordMeta">64yo Male • Heart Rate: 88 bpm</span>
-                </div>
-            </div>
+                <div class="representations-cards-grid">
+                    <div class="rep-card">
+                        <div class="rep-card-header">
+                            <span class="rep-name">Temporal Backbone</span>
+                            <span class="rep-dim font-mono">Z_temp &in; &reals;512</span>
+                        </div>
+                        <div class="rep-desc">1D ResNet with Squeeze-and-Excitation (SE) channel attention over 12 leads.</div>
+                        <div class="rep-metric font-mono" id="valRepTemporal">L2 Norm: 24.18 &bull; Sparsity: 4.2%</div>
+                    </div>
 
-            <!-- Model Confidence Levels Table -->
-            <h4 class="report-section-label">MODEL CONFIDENCE LEVELS (TEMPORAL • MORPHOLOGY • FUSION JOINT)</h4>
-            <div class="confidence-table-wrapper">
-                <table class="styled-table confidence-table">
-                    <thead>
-                        <tr>
-                            <th>Sub-Model Head</th>
-                            <th>NORM</th>
-                            <th>MI</th>
-                            <th>STTC</th>
-                            <th>CD</th>
-                            <th>HYP</th>
-                        </tr>
-                    </thead>
-                    <tbody id="confidenceTableBody">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
-            </div>
+                    <div class="rep-card">
+                        <div class="rep-card-header">
+                            <span class="rep-name">Morphology Encoder</span>
+                            <span class="rep-dim font-mono">Z_morph &in; &reals;512</span>
+                        </div>
+                        <div class="rep-desc">2D Time-Frequency Spectrogram CNN capturing wave slope, curvature, and energy.</div>
+                        <div class="rep-metric font-mono" id="valRepMorphology">L2 Norm: 21.05 &bull; Sparsity: 3.8%</div>
+                    </div>
 
-            <!-- 12-Lead Full ECG Waveform (Raw) Canvas -->
-            <div class="waveform-block">
-                <div class="block-header">
-                    <h4 class="figure-title">1. Full 12-Lead ECG Waveform (Raw Signal):</h4>
-                    <span class="block-badge">10s Standard Telemetry • 100 Hz</span>
-                </div>
-                <div class="canvas-container">
-                    <canvas id="rawEcgCanvas" class="ecg-canvas"></canvas>
-                </div>
-            </div>
+                    <div class="rep-card">
+                        <div class="rep-card-header">
+                            <span class="rep-name">Biomarker Encoder</span>
+                            <span class="rep-dim font-mono">Z_bio &in; &reals;32</span>
+                        </div>
+                        <div class="rep-desc">Attention-MLP Autoencoder over 24 physiological biomarkers + 24 missingness masks.</div>
+                        <div class="rep-metric font-mono" id="valRepBiomarker">L2 Norm: 8.42 &bull; Imputed: 0/24</div>
+                    </div>
 
-            <!-- Temporal Attribution Diagram (Integrated Gradients) -->
-            <div class="waveform-block">
-                <div class="block-header">
-                    <h4 class="figure-title">2. Temporal Attribution Diagram (1D Integrated Gradients Overlay):</h4>
-                    <span class="block-badge">Gradient Attribution Focused Intervals</span>
+                    <div class="rep-card rep-card-highlight">
+                        <div class="rep-card-header">
+                            <span class="rep-name font-bold">Joint Fused Patient Vector</span>
+                            <span class="rep-dim font-mono font-bold">Z_fused &in; &reals;1056 &rarr; &reals;128</span>
+                        </div>
+                        <div class="rep-desc">Non-linear projection dense embedding used for multi-label classification and indexing.</div>
+                        <div class="rep-metric font-mono font-bold" id="valRepFused">Dense Bottleneck Active &bull; Cosine Match: 0.94</div>
+                    </div>
                 </div>
-                <div class="canvas-container">
-                    <canvas id="temporalAttrCanvas" class="ecg-canvas"></canvas>
-                </div>
-            </div>
+            </section>
 
-            <!-- Morphology 2D Attribution Diagram (Grad-CAM Spectrogram Heatmaps) -->
-            <div class="waveform-block">
-                <div class="block-header">
-                    <h4 class="figure-title">3. Morphology 2D Attribution Diagram (12-Lead Time-Frequency Grad-CAM):</h4>
-                    <span class="block-badge">Layer4 Conv2 Activation Maps</span>
+            <!-- 8. DETAILED CARDIOLOGY CONSULTATION & CLINICAL IMPRESSION (AI / HEURISTIC) -->
+            <section class="clinical-narrative-section">
+                <div class="section-title-bar">
+                    <h3>CARDIOLOGY CLINICAL CONSULTATION & ELECTROPHYSIOLOGICAL OVERREAD</h3>
+                    <span class="section-note font-mono" id="valNarrativeSource">Source: Expert Clinical Synthesizer</span>
                 </div>
-                <div class="gradcam-grid" id="gradcamGrid">
-                    <!-- 12 Lead heatmaps rendered by JS -->
-                </div>
-            </div>
 
-            <!-- Morphology Translated Waveform Visualization -->
-            <div class="waveform-block">
-                <div class="block-header">
-                    <h4 class="figure-title">4. Morphology Translated Waveform Visualization (Landmark Bounding Boxes):</h4>
-                    <span class="block-badge">Wave Bounding Intervals & Scores</span>
+                <div class="narrative-content-box" id="clinicalNarrativeContent">
+                    <p class="loading-text">Loading structured electrophysiology narrative...</p>
                 </div>
-                <div class="canvas-container">
-                    <canvas id="translatedWaveformCanvas" class="ecg-canvas"></canvas>
-                </div>
-            </div>
+            </section>
 
-        </section>
+            <!-- 9. PHYSICIAN ATTESTATION, DISPOSITION & SIGN-OFF BLOCK -->
+            <section class="physician-attestation-block">
+                <div class="disposition-options">
+                    <span class="disposition-title">RECOMMENDED CLINICAL DISPOSITION:</span>
+                    <label class="checkbox-label"><input type="checkbox" id="chkRoutine"> Routine Outpatient Follow-up</label>
+                    <label class="checkbox-label"><input type="checkbox" id="chkUrgent" checked> Urgent Cardiology Telemetry Consultation</label>
+                    <label class="checkbox-label"><input type="checkbox" id="chkCath"> Immediate Cardiac Catheterization / PCI Activation</label>
+                </div>
 
-        <!-- SECTION 3: Clinical Biomarkers Radar & Table -->
-        <section class="card full-width biomarker-card">
-            <div class="card-header">
-                <div class="card-title-group">
-                    <span class="card-icon">🔬</span>
-                    <h2>Clinical Biomarkers & HRV Profile (Attention MLP • 32-D Representation)</h2>
-                </div>
-                <span class="latent-pill">24 CWT Features &middot; 48-D Input &rarr; 32-D Embedding</span>
-            </div>
-            <div class="biomarker-split-grid">
-                <div class="radar-box">
-                    <canvas id="biomarkerRadarChart"></canvas>
-                </div>
-                <div class="biomarker-table-box">
-                    <table class="styled-table">
-                        <thead>
-                            <tr>
-                                <th>Clinical Metric</th>
-                                <th>Measured Value</th>
-                                <th>Standard Reference Limit</th>
-                                <th>Clinical Evaluation</th>
-                            </tr>
-                        </thead>
-                        <tbody id="biomarkerTableBody">
-                            <!-- Populated via JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+                <div class="attestation-signatures-grid">
+                    <div class="sig-box">
+                        <div class="sig-line"></div>
+                        <div class="sig-title">REVIEWING ELECTROPHYSIOLOGIST / CARDIOLOGIST</div>
+                        <div class="sig-subtitle font-mono">M.D., FACC, FHRS &bull; License # CAR-89412</div>
+                    </div>
 
-        <!-- SECTION 4: Gemini AI Consultation & Research Interpretation -->
-        <section class="card full-width llm-card">
-            <div class="card-header">
-                <div class="card-title-group">
-                    <span class="card-icon">🤖</span>
-                    <h2>Gemini AI — Clinical Consultation & Electrophysiological Interpretation</h2>
-                </div>
-                <button id="btnRegenLLM" class="btn-secondary">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                    <span>Regenerate Synthesis</span>
-                </button>
-            </div>
-            <div class="llm-report-content" id="llmReportContent">
-                <div class="llm-loading-state">
-                    <span class="spinner"></span>
-                    <p>Synthesizing deep cardiological report from multimodal representations via Gemini API...</p>
-                </div>
-            </div>
-        </section>
+                    <div class="sig-box">
+                        <div class="sig-line"></div>
+                        <div class="sig-title">DATE & VERIFICATION TIMESTAMP</div>
+                        <div class="sig-subtitle font-mono" id="valSigDate">2026-10-13 14:05 UTC</div>
+                    </div>
 
+                    <div class="sig-box sig-box-badge">
+                        <div class="verified-seal">
+                            <span>VERIFIED</span>
+                            <span class="seal-sub font-mono">ECG FOUNDATION v2.4</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-disclaimer">
+                    <strong>LEGAL DISCLAIMER:</strong> This document was generated with computer-assisted electrophysiological analysis via the Tri-Modal ECG Foundation Representation Architecture. Machine learning predictions are assistive and must be reviewed, verified, and signed by a licensed physician prior to initiating diagnostic or therapeutic medical interventions.
+                </div>
+            </section>
+
+        </article>
     </main>
 
-    <footer class="app-footer">
-        <p>ECG Multimodal Representation System • PTB-XL Foundation Model Intelligence Cockpit • Powered by Gemini AI</p>
-    </footer>
-
-    <script src="app.js?v=2"></script>
+    <!-- App Script -->
+    <script src="app.js"></script>
 </body>
 </html>

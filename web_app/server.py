@@ -47,6 +47,28 @@ def get_engine() -> ECGEncoderEngine:
     return engine
 
 
+import math
+
+def sanitize_json_obj(obj: Any) -> Any:
+    """Recursively converts NaN and Infinity floats to None (null in JSON)."""
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    elif isinstance(obj, (np.floating, np.integer)):
+        val = obj.item()
+        if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+            return None
+        return val
+    elif isinstance(obj, dict):
+        return {k: sanitize_json_obj(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [sanitize_json_obj(v) for v in obj]
+    elif isinstance(obj, np.ndarray):
+        return sanitize_json_obj(obj.tolist())
+    return obj
+
+
 class ECGWebAppHandler(BaseHTTPRequestHandler):
     
     def _send_json(self, data: Any, status: int = 200):
@@ -56,7 +78,8 @@ class ECGWebAppHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
-        self.wfile.write(json.dumps(data).encode("utf-8"))
+        clean_data = sanitize_json_obj(data)
+        self.wfile.write(json.dumps(clean_data).encode("utf-8"))
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -141,23 +164,32 @@ class ECGWebAppHandler(BaseHTTPRequestHandler):
             
         elif path.startswith("/api/sample/"):
             sample_id = path.replace("/api/sample/", "").strip()
-            payload = sample_manager.generate_full_sample_payload(sample_id)
-            self._send_json({
-                "status": "success",
-                "payload": payload,
-                "sample": payload.get("record", {}),
-                "leads": payload.get("leads", LEAD_NAMES),
-                "signal": payload.get("signal", []),
-                "biomarkers": payload.get("biomarkers", {})
-            })
+            try:
+                payload = sample_manager.generate_full_sample_payload(sample_id)
+                self._send_json({
+                    "status": "success",
+                    "payload": payload,
+                    "sample": payload.get("record", {}),
+                    "leads": payload.get("leads", LEAD_NAMES),
+                    "signal": payload.get("signal", []),
+                    "biomarkers": payload.get("biomarkers", {}),
+                    "imputed_biomarkers": payload.get("imputed_biomarkers", {})
+                })
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                self._send_json({"status": "error", "message": str(e)}, 500)
             return
 
         # Static File Serving
         if path == "/" or path == "":
             file_path = STATIC_DIR / "index.html"
+        elif path == "/canvas" or path == "/visualizer":
+            file_path = PROJECT_ROOT / "outputs" / "reports" / "ecg_multi_source_canvas_visualizer.html"
         else:
             rel_path = path.lstrip("/")
             file_path = STATIC_DIR / rel_path
+
 
         if file_path.exists() and file_path.is_file():
             mime_type, _ = mimetypes.guess_type(str(file_path))

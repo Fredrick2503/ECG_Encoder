@@ -55,5 +55,35 @@ class MLPClassifier(nn.Module):
             nn.Linear(hidden_dim // 2, num_classes)
         )
 
-    def forward(self, x):
+    def forward_features(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Extracts the learned 128-D unified dense embedding from the non-linear MLP bottleneck.
+        
+        Args:
+            x: Multimodal fused representation tensor of shape (batch_size, 1056) or (1056,)
+            
+        Returns:
+            torch.Tensor: Unified joint embedding of shape (batch_size, 128)
+        """
+        is_1d = (x.ndim == 1)
+        if is_1d:
+            x = x.unsqueeze(0)
+            
+        # Pass through layers 0 to 6:
+        # 0: Linear(1056, 256)
+        # 1: BatchNorm1d(256)
+        # 2: ReLU()
+        # 3: Dropout (disabled in eval mode)
+        # 4: Linear(256, 128)
+        # 5: BatchNorm1d(128)
+        # 6: ReLU()
+        h = x
+        for i in range(7):
+            h = self.net[i](h)
+            
+        if is_1d:
+            h = h.squeeze(0)
+        return h
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)

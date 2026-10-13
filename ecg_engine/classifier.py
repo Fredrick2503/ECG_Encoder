@@ -91,5 +91,25 @@ class DiagnosticClassifier(BaseClassifier):
         preds = (probs >= th).long()
         return preds
 
+    def get_unified_embedding(self, z_fused: torch.Tensor) -> torch.Tensor:
+        """
+        Extracts the non-linear 128-D unified multimodal embedding from the MLP bottleneck.
+        
+        Args:
+            z_fused: Concatenated multimodal representation tensor of shape (batch_size, 1056).
+            
+        Returns:
+            torch.Tensor: Unified joint embedding tensor of shape (batch_size, 128).
+        """
+        z_fused = z_fused.to(self.device)
+        with torch.no_grad():
+            if hasattr(self.model, "forward_features"):
+                return self.model.forward_features(z_fused)
+            # Fallback if model is a custom wrapped module
+            h = z_fused
+            for i in range(min(7, len(self.model.net))):
+                h = self.model.net[i](h)
+            return h
+
     def forward(self, z_fused: torch.Tensor) -> torch.Tensor:
         return self.predict_proba(z_fused)

@@ -52,7 +52,8 @@ class ECGEncoderEngine:
         # Initialize pipeline components via dependency injection
         self.preprocessor = SignalPreprocessor(
             target_length=self.config.target_length,
-            num_leads=self.config.num_leads
+            num_leads=self.config.num_leads,
+            auto_adapt_duration=self.config.auto_adapt_duration
         )
         self.biomarker_service = BiomarkerService(
             imputer_path=self.config.imputer_path,
@@ -113,11 +114,19 @@ class ECGEncoderEngine:
         # 4. Multimodal Fusion (1056-D)
         z_fused = self.fusion_engine.fuse(z_t, z_m, z_b)
 
+        # 5. Non-Linear Unified Dense Bottleneck Embedding (128-D)
+        try:
+            z_unified = self.classifier.get_unified_embedding(z_fused)
+            z_unified_np = z_unified.detach().cpu().numpy()
+        except Exception:
+            z_unified_np = None
+
         return FusedRepresentationResult(
             z_fused=z_fused.detach().cpu().numpy(),
             z_temporal=z_t.detach().cpu().numpy(),
             z_morphology=z_m.detach().cpu().numpy(),
             z_biomarker=z_b.detach().cpu().numpy(),
+            z_unified=z_unified_np,
             metadata={"batch_size": batch_size, "device": str(self.device)}
         )
 
@@ -151,23 +160,48 @@ class ECGEncoderEngine:
             else:
                 z_fused_tensor = z_fused.to(self.device)
 
-        probs_tensor = self.classifier.predict_proba(z_fused_tensor)
-        preds_tensor = self.classifier.predict(z_fused_tensor, thresholds=custom_thresholds)
+        # Check for native 2-second duration mode
+        is_short = False
+        if ecg_signal is not None:
+            sig_len = ecg_signal.shape[-1] if hasattr(ecg_signal, "shape") else 1000
+            if sig_len <= 300 and getattr(self.temporal_encoder, "model_2sec", None) is not None:
+                is_short = True
 
-        probs = probs_tensor.detach().cpu().numpy()
-        preds = preds_tensor.detach().cpu().numpy()
         th = custom_thresholds if custom_thresholds is not None else self.classifier.thresholds
 
-        # Map binary predictions to diagnostic labels
+        if is_short:
+            # Native 2-second calibrated temporal classification head
+            z_t_tensor = torch.from_numpy(rep_res.z_temporal).float().to(self.device)
+            with torch.no_grad():
+                logits = self.temporal_encoder.model_2sec.fc(z_t_tensor)
+                probs_tensor = torch.sigmoid(logits)
+            probs = probs_tensor.detach().cpu().numpy()
+            preds = (probs >= th).astype(int)
+        else:
+            probs_tensor = self.classifier.predict_proba(z_fused_tensor)
+            preds_tensor = self.classifier.predict(z_fused_tensor, thresholds=custom_thresholds)
+            probs = probs_tensor.detach().cpu().numpy()
+            preds = preds_tensor.detach().cpu().numpy()
+
+        # Map binary predictions to diagnostic labels with clinical arbitration
         detected_conditions = []
-        for row in preds:
+        for i, row in enumerate(preds):
             detected = [
                 self.classifier.class_names[idx]
                 for idx, val in enumerate(row)
                 if val == 1
             ]
-            if not detected:
+            probs_i = probs[i]
+            if "NORM" in detected:
+                detected = [
+                    c for c in detected 
+                    if c == "NORM" or probs_i[self.classifier.class_names.index(c)] > 0.65
+                ]
+            elif probs_i[0] >= 0.40 and not any(probs_i[k] >= 0.65 for k in range(1, len(self.classifier.class_names))):
+                detected = ["NORM"]
+            elif not detected:
                 detected = ["NORM (Presumed Normal)"]
+
             detected_conditions.append(detected)
 
         return DiagnosticPredictionResult(

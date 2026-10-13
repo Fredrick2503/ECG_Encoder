@@ -9,6 +9,7 @@ __pycache__/
 *$py.class
 
 # Project temporary and intermediate experimental artifacts
+external_digitizers/
 scratch/
 mlruns.bak/
 mlruns/
@@ -20,6 +21,8 @@ shafali.ipynb
 biomarkers/embeddings_*.csv
 biomarkers/ecg_biomarkers_preprocessed.csv
 biomarkers/extraction_log_full.csv
+outputs/ptbxl_digitization_benchmark/dataset/*/*.npy
+outputs/ptbxl_digitization_benchmark/dataset/*/*.png
 models/A*.pt
 models/B*.pt
 models/C*.pt
@@ -260,3 +263,6 @@ models/pretrained/
 prev_ver/
 outputs/logs/
 outputs/predictions/
+outputs/reports/*.html
+outputs/reports/*.json
+!outputs/reports/.gitkeep
